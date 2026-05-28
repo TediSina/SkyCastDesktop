@@ -19,6 +19,8 @@ public class RegistrationPanel extends SkyBackgroundPanel {
     private final JTextField cityField = AppTheme.textField();
     private final JPasswordField passwordField = AppTheme.passwordField();
     private final JPasswordField confirmPasswordField = AppTheme.passwordField();
+    private final JButton createButton = AppTheme.primaryButton("Regjistrohu");
+    private final JButton loginButton = AppTheme.secondaryButton("Kthehu te hyrja");
 
     public RegistrationPanel(SkyCastApp app, AuthService authService) {
         this.app = app;
@@ -28,13 +30,23 @@ public class RegistrationPanel extends SkyBackgroundPanel {
         setLayout(new GridBagLayout());
         setBorder(AppTheme.cardBorder());
         add(createShell());
+
+        usernameField.addActionListener(event -> register());
+        emailField.addActionListener(event -> register());
+        passwordField.addActionListener(event -> register());
+        confirmPasswordField.addActionListener(event -> register());
+        cityField.addActionListener(event -> register());
+    }
+
+    public JButton defaultButton() {
+        return createButton;
     }
 
     private JPanel createShell() {
         JPanel shell = new JPanel(new BorderLayout(0, 0));
         shell.setOpaque(false);
         shell.setPreferredSize(new Dimension(980, 560));
-        shell.add(new AuthShowcasePanel("Your city,\nat a glance"), BorderLayout.WEST);
+        shell.add(new AuthShowcasePanel("Qyteti yt,\nme një vështrim"), BorderLayout.WEST);
         shell.add(createCard(), BorderLayout.CENTER);
         return shell;
     }
@@ -50,24 +62,22 @@ public class RegistrationPanel extends SkyBackgroundPanel {
         constraints.gridx = 0;
         constraints.gridy = 0;
         constraints.anchor = GridBagConstraints.WEST;
-        heading.add(AppTheme.eyebrow("NEW PROFILE"), constraints);
+        heading.add(AppTheme.eyebrow("PROFIL I RI"), constraints);
         constraints.gridy = 1;
         constraints.insets = new Insets(10, 0, 0, 0);
-        heading.add(AppTheme.display("Create account"), constraints);
+        heading.add(AppTheme.display("Krijo llogari"), constraints);
         constraints.gridy = 2;
         constraints.insets = new Insets(8, 0, 0, 0);
-        heading.add(AppTheme.muted("Save a preferred city and keep recent searches locally."), constraints);
+        heading.add(AppTheme.muted("Ruaj qytetin e preferuar dhe kërkimet e fundit lokalisht."), constraints);
 
         JPanel fields = new JPanel(new GridBagLayout());
         fields.setOpaque(false);
-        addField(fields, 0, 0, "Username", usernameField);
-        addField(fields, 1, 0, "Email", emailField);
-        addField(fields, 0, 1, "Password", passwordField);
-        addField(fields, 1, 1, "Confirm password", confirmPasswordField);
-        addField(fields, 0, 2, "Preferred city", cityField);
+        addField(fields, 0, 0, "Përdoruesi", usernameField);
+        addField(fields, 1, 0, "Emaili", emailField);
+        addField(fields, 0, 1, "Fjalëkalimi", passwordField);
+        addField(fields, 1, 1, "Konfirmo fjalëkalimin", confirmPasswordField);
+        addField(fields, 0, 2, "Qyteti i preferuar", cityField);
 
-        JButton createButton = AppTheme.primaryButton("Register");
-        JButton loginButton = AppTheme.secondaryButton("Back to Login");
         createButton.addActionListener(event -> register());
         loginButton.addActionListener(event -> app.showLogin());
 
@@ -106,7 +116,7 @@ public class RegistrationPanel extends SkyBackgroundPanel {
         if (!String.valueOf(password).equals(String.valueOf(confirm))) {
             clear(password);
             clear(confirm);
-            JOptionPane.showMessageDialog(this, "Passwords do not match.", "Registration Failed", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Fjalëkalimet nuk përputhen.", "Regjistrimi dështoi", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
@@ -123,7 +133,7 @@ public class RegistrationPanel extends SkyBackgroundPanel {
             app.showDashboard(user);
         } catch (Exception ex) {
             clear(confirm);
-            JOptionPane.showMessageDialog(this, ex.getMessage(), "Registration Failed", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Regjistrimi dështoi", JOptionPane.ERROR_MESSAGE);
         }
     }
 

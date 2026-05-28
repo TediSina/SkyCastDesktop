@@ -4,22 +4,22 @@ public final class WeatherCodes {
 
     public static String describe(int code) {
         return switch (code) {
-            case 0 -> "Clear sky";
-            case 1 -> "Mainly clear";
-            case 2 -> "Partly cloudy";
-            case 3 -> "Overcast";
-            case 45, 48 -> "Fog";
-            case 51, 53, 55 -> "Drizzle";
-            case 56, 57 -> "Freezing drizzle";
-            case 61, 63, 65 -> "Rain";
-            case 66, 67 -> "Freezing rain";
-            case 71, 73, 75 -> "Snowfall";
-            case 77 -> "Snow grains";
-            case 80, 81, 82 -> "Rain showers";
-            case 85, 86 -> "Snow showers";
-            case 95 -> "Thunderstorm";
-            case 96, 99 -> "Thunderstorm with hail";
-            default -> "Unknown";
+            case 0 -> "Qiell i kthjellët";
+            case 1 -> "Kryesisht kthjellët";
+            case 2 -> "Pjesërisht me re";
+            case 3 -> "I vrenjtur";
+            case 45, 48 -> "Mjegull";
+            case 51, 53, 55 -> "Rigë";
+            case 56, 57 -> "Rigë me ngricë";
+            case 61, 63, 65 -> "Shi";
+            case 66, 67 -> "Shi me ngricë";
+            case 71, 73, 75 -> "Reshje dëbore";
+            case 77 -> "Kokrriza dëbore";
+            case 80, 81, 82 -> "Rrebeshe shiu";
+            case 85, 86 -> "Rrebeshe dëbore";
+            case 95 -> "Stuhi me vetëtima";
+            case 96, 99 -> "Stuhi me breshër";
+            default -> "E panjohur";
         };
     }
 

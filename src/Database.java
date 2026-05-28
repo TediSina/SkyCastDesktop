@@ -131,7 +131,7 @@ public class Database {
             Class.forName("org.sqlite.JDBC");
         } catch (ClassNotFoundException ex) {
             throw new IllegalStateException(
-                    "SQLite JDBC driver is missing. Keep lib/sqlite-jdbc-3.53.1.0.jar on the classpath.",
+                    "Biblioteka SQLite JDBC mungon. Mbaje lib/sqlite-jdbc-3.53.1.0.jar në classpath.",
                     ex
             );
         }

@@ -22,11 +22,11 @@ public class WeatherService {
     public LocationResult searchLocation(String city) throws IOException, InterruptedException {
         String query = GEOCODING_URL
                 + "?name=" + encode(city)
-                + "&count=1&language=en&format=json";
+                + "&count=1&language=sq&format=json";
         Map<String, Object> response = requestJson(query);
         List<Object> results = list(response.get("results"));
         if (results.isEmpty()) {
-            throw new IOException("No matching city was found for \"" + city + "\".");
+            throw new IOException("Nuk u gjet asnjë qytet për \"" + city + "\".");
         }
 
         Map<String, Object> first = object(results.get(0));
@@ -103,7 +103,7 @@ public class WeatherService {
 
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
-            throw new IOException("Weather service returned HTTP " + response.statusCode() + ".");
+            throw new IOException("Shërbimi i motit ktheu kodin HTTP " + response.statusCode() + ".");
         }
 
         Map<String, Object> json = SimpleJsonParser.parseObject(response.body());
@@ -122,7 +122,7 @@ public class WeatherService {
         if (value instanceof Map<?, ?> map) {
             return (Map<String, Object>) map;
         }
-        throw new IllegalArgumentException("Unexpected API response format.");
+        throw new IllegalArgumentException("Formati i përgjigjes nga API nuk pritej.");
     }
 
     @SuppressWarnings("unchecked")

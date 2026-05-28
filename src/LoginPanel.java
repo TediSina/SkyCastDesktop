@@ -16,6 +16,8 @@ public class LoginPanel extends SkyBackgroundPanel {
     private final AuthService authService;
     private final JTextField loginField = AppTheme.textField();
     private final JPasswordField passwordField = AppTheme.passwordField();
+    private final JButton loginButton = AppTheme.primaryButton("Hyr");
+    private final JButton registerButton = AppTheme.secondaryButton("Krijo llogari");
 
     public LoginPanel(SkyCastApp app, AuthService authService) {
         this.app = app;
@@ -24,13 +26,20 @@ public class LoginPanel extends SkyBackgroundPanel {
         setLayout(new GridBagLayout());
         setBorder(AppTheme.cardBorder());
         add(createShell());
+
+        loginField.addActionListener(event -> login());
+        passwordField.addActionListener(event -> login());
+    }
+
+    public JButton defaultButton() {
+        return loginButton;
     }
 
     private JPanel createShell() {
         JPanel shell = new JPanel(new BorderLayout(0, 0));
         shell.setOpaque(false);
         shell.setPreferredSize(new Dimension(860, 520));
-        shell.add(new AuthShowcasePanel("Forecasts\nwith focus"), BorderLayout.WEST);
+        shell.add(new AuthShowcasePanel("Parashikime\nme qartësi"), BorderLayout.WEST);
         shell.add(createCard(), BorderLayout.CENTER);
         return shell;
     }
@@ -46,21 +55,18 @@ public class LoginPanel extends SkyBackgroundPanel {
         constraints.gridx = 0;
         constraints.gridy = 0;
         constraints.anchor = GridBagConstraints.WEST;
-        heading.add(AppTheme.eyebrow("LOCAL ACCOUNT"), constraints);
+        heading.add(AppTheme.eyebrow("LLOGARI LOKALE"), constraints);
         constraints.gridy = 1;
         constraints.insets = new Insets(10, 0, 0, 0);
-        heading.add(AppTheme.display("Welcome back"), constraints);
+        heading.add(AppTheme.display("Mirë se u riktheve"), constraints);
         constraints.gridy = 2;
         constraints.insets = new Insets(8, 0, 0, 0);
-        heading.add(AppTheme.muted("Check your saved city and latest weather history."), constraints);
+        heading.add(AppTheme.muted("Shiko qytetin e ruajtur dhe historikun e fundit të motit."), constraints);
 
         JPanel fields = new JPanel(new GridBagLayout());
         fields.setOpaque(false);
-        addField(fields, 0, "Username or email", loginField);
-        addField(fields, 1, "Password", passwordField);
-
-        JButton loginButton = AppTheme.primaryButton("Login");
-        JButton registerButton = AppTheme.secondaryButton("Create Account");
+        addField(fields, 0, "Përdoruesi ose emaili", loginField);
+        addField(fields, 1, "Fjalëkalimi", passwordField);
 
         loginButton.addActionListener(event -> login());
         registerButton.addActionListener(event -> app.showRegistration());
@@ -100,7 +106,7 @@ public class LoginPanel extends SkyBackgroundPanel {
             passwordField.setText("");
             app.showDashboard(user);
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, ex.getMessage(), "Login Failed", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Hyrja dështoi", JOptionPane.ERROR_MESSAGE);
         }
     }
 }

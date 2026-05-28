@@ -28,24 +28,24 @@ public class DashboardPanel extends SkyBackgroundPanel {
     private User user;
     private WeatherData currentWeather;
     private final JTextField cityField = AppTheme.textField();
-    private final JButton searchButton = AppTheme.primaryButton("Search");
-    private final JButton loadSavedCityButton = AppTheme.secondaryButton("Load Saved");
-    private final JButton saveCityButton = AppTheme.warmButton("Save City");
-    private final JButton logoutButton = AppTheme.secondaryButton("Logout");
+    private final JButton searchButton = AppTheme.primaryButton("Kërko");
+    private final JButton loadSavedCityButton = AppTheme.secondaryButton("Hap qytetin");
+    private final JButton saveCityButton = AppTheme.warmButton("Ruaj qytetin");
+    private final JButton logoutButton = AppTheme.secondaryButton("Dil");
     private final JLabel welcomeLabel = AppTheme.section("");
-    private final JLabel statusLabel = AppTheme.muted("Search a city to load live Open-Meteo weather.");
-    private final JLabel locationLabel = AppTheme.section("No city loaded");
+    private final JLabel statusLabel = AppTheme.muted("Kërko një qytet për të ngarkuar motin drejtpërdrejt nga Open-Meteo.");
+    private final JLabel locationLabel = AppTheme.section("Nuk ka qytet të ngarkuar");
     private final WeatherIconView weatherIconView = new WeatherIconView();
     private final WeatherCardPanel currentWeatherCard = new WeatherCardPanel();
     private final JLabel temperatureLabel = new JLabel("-- C");
-    private final JLabel conditionLabel = AppTheme.muted("Current conditions will appear here.");
+    private final JLabel conditionLabel = AppTheme.muted("Kushtet aktuale do të shfaqen këtu.");
     private final JLabel feelsLikeLabel = valueLabel("--");
     private final JLabel humidityLabel = valueLabel("--");
     private final JLabel windLabel = valueLabel("--");
     private final JLabel rainLabel = valueLabel("--");
     private final JLabel observedLabel = AppTheme.muted("--");
     private final DefaultTableModel forecastModel = new DefaultTableModel(
-            new String[]{"Date", "Condition", "High", "Low", "Rain", "Wind"}, 0
+            new String[]{"Data", "Gjendja", "Maks.", "Min.", "Reshjet", "Era"}, 0
     ) {
         @Override
         public boolean isCellEditable(int row, int column) {
@@ -53,7 +53,7 @@ public class DashboardPanel extends SkyBackgroundPanel {
         }
     };
     private final DefaultTableModel historyModel = new DefaultTableModel(
-            new String[]{"City", "Temp", "Condition", "Searched"}, 0
+            new String[]{"Qyteti", "Temp.", "Gjendja", "Kërkuar më"}, 0
     ) {
         @Override
         public boolean isCellEditable(int row, int column) {
@@ -72,10 +72,11 @@ public class DashboardPanel extends SkyBackgroundPanel {
         add(createHeader(), BorderLayout.NORTH);
         add(createContent(), BorderLayout.CENTER);
 
-        loadSavedCityButton.setToolTipText("Loads the preferred city saved on your account.");
-        saveCityButton.setToolTipText("Saves the city currently displayed as your preferred city.");
+        loadSavedCityButton.setToolTipText("Ngarkon qytetin e preferuar të ruajtur në llogari.");
+        saveCityButton.setToolTipText("Ruan qytetin që po shfaqet si qytetin tënd të preferuar.");
         saveCityButton.setEnabled(false);
 
+        cityField.addActionListener(event -> searchCurrentCity());
         searchButton.addActionListener(event -> searchCurrentCity());
         loadSavedCityButton.addActionListener(event -> {
             if (user != null) {
@@ -91,12 +92,16 @@ public class DashboardPanel extends SkyBackgroundPanel {
         this.user = user;
         this.currentWeather = null;
         saveCityButton.setEnabled(false);
-        welcomeLabel.setText("Welcome, " + user.username());
+        welcomeLabel.setText("Mirë se erdhe, " + user.username());
         cityField.setText(user.preferredCity());
         loadHistory();
         if (user.preferredCity() != null && !user.preferredCity().isBlank()) {
             searchCurrentCity();
         }
+    }
+
+    public JButton defaultButton() {
+        return searchButton;
     }
 
     private JPanel createHeader() {
@@ -116,7 +121,7 @@ public class DashboardPanel extends SkyBackgroundPanel {
 
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         actions.setOpaque(false);
-        JLabel liveLabel = AppTheme.eyebrow("OPEN-METEO LIVE");
+        JLabel liveLabel = AppTheme.eyebrow("DREJTPËRDREJT NGA OPEN-METEO");
         liveLabel.setBorder(BorderFactory.createEmptyBorder(11, 0, 0, 12));
         actions.add(liveLabel);
         actions.add(logoutButton);
@@ -168,7 +173,7 @@ public class DashboardPanel extends SkyBackgroundPanel {
         actions.add(searchButton);
         row.add(actions, BorderLayout.EAST);
 
-        panel.add(AppTheme.section("City Weather"), BorderLayout.NORTH);
+        panel.add(AppTheme.section("Moti sipas qytetit"), BorderLayout.NORTH);
         panel.add(row, BorderLayout.CENTER);
         panel.add(statusLabel, BorderLayout.SOUTH);
         return panel;
@@ -211,10 +216,10 @@ public class DashboardPanel extends SkyBackgroundPanel {
 
         JPanel details = new JPanel(new GridBagLayout());
         details.setOpaque(false);
-        addMetric(details, 0, 0, "Feels like", feelsLikeLabel);
-        addMetric(details, 1, 0, "Humidity", humidityLabel);
-        addMetric(details, 0, 1, "Wind", windLabel);
-        addMetric(details, 1, 1, "Rain", rainLabel);
+        addMetric(details, 0, 0, "Ndihet si", feelsLikeLabel);
+        addMetric(details, 1, 0, "Lagështia", humidityLabel);
+        addMetric(details, 0, 1, "Era", windLabel);
+        addMetric(details, 1, 1, "Reshjet", rainLabel);
 
         panel.add(top, BorderLayout.NORTH);
         panel.add(details, BorderLayout.CENTER);
@@ -233,7 +238,7 @@ public class DashboardPanel extends SkyBackgroundPanel {
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
         scrollPane.getViewport().setBackground(Color.WHITE);
 
-        panel.add(AppTheme.section("7-Day Forecast"), BorderLayout.NORTH);
+        panel.add(AppTheme.section("Parashikimi 7-ditor"), BorderLayout.NORTH);
         panel.add(scrollPane, BorderLayout.CENTER);
         return panel;
     }
@@ -251,7 +256,7 @@ public class DashboardPanel extends SkyBackgroundPanel {
         scrollPane.setBorder(BorderFactory.createEmptyBorder());
         scrollPane.getViewport().setBackground(Color.WHITE);
 
-        panel.add(AppTheme.section("Recent Searches"), BorderLayout.NORTH);
+        panel.add(AppTheme.section("Kërkimet e fundit"), BorderLayout.NORTH);
         panel.add(scrollPane, BorderLayout.CENTER);
         return panel;
     }
@@ -285,14 +290,14 @@ public class DashboardPanel extends SkyBackgroundPanel {
         User activeUser = user;
         String city = cityField.getText().trim();
         if (city.isBlank()) {
-            JOptionPane.showMessageDialog(this, "Enter a city name.", "Missing City", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Shkruaj emrin e qytetit.", "Mungon qyteti", JOptionPane.WARNING_MESSAGE);
             return;
         }
         if (activeUser == null) {
             return;
         }
 
-        setLoading(true, "Loading weather for " + city + "...");
+        setLoading(true, "Po ngarkohet moti për " + city + "...");
         SwingWorker<WeatherData, Void> worker = new SwingWorker<>() {
             @Override
             protected WeatherData doInBackground() throws Exception {
@@ -307,14 +312,14 @@ public class DashboardPanel extends SkyBackgroundPanel {
                     showWeather(weather);
                     database.saveWeatherSearch(activeUser, weather);
                     loadHistory();
-                    statusLabel.setText("Live data loaded from Open-Meteo.");
+                    statusLabel.setText("Të dhënat u ngarkuan drejtpërdrejt nga Open-Meteo.");
                 } catch (Exception ex) {
                     Throwable cause = ex.getCause() == null ? ex : ex.getCause();
-                    statusLabel.setText("Could not load weather.");
+                    statusLabel.setText("Moti nuk mund të ngarkohej.");
                     JOptionPane.showMessageDialog(
                             DashboardPanel.this,
                             cause.getMessage(),
-                            "Weather Error",
+                            "Gabim moti",
                             JOptionPane.ERROR_MESSAGE
                     );
                 } finally {
@@ -332,20 +337,20 @@ public class DashboardPanel extends SkyBackgroundPanel {
         locationLabel.setText(weather.location().displayName());
         weatherIconView.setIcon(WeatherCodes.icon(weather.weatherCode()));
         conditionLabel.setText(WeatherCodes.describeWithIcon(weather.weatherCode()));
-        temperatureLabel.setText(format(weather.temperature()) + " C");
-        feelsLikeLabel.setText(format(weather.apparentTemperature()) + " C");
+        temperatureLabel.setText(format(weather.temperature()) + " °C");
+        feelsLikeLabel.setText(format(weather.apparentTemperature()) + " °C");
         humidityLabel.setText(weather.humidity() + "%");
         windLabel.setText(format(weather.windSpeed()) + " km/h");
         rainLabel.setText(format(weather.precipitation()) + " mm");
-        observedLabel.setText("Observed: " + weather.observedAt());
+        observedLabel.setText("Vëzhguar më: " + weather.observedAt());
 
         forecastModel.setRowCount(0);
         for (DailyForecast day : weather.dailyForecasts()) {
             forecastModel.addRow(new Object[]{
                     day.date(),
                     WeatherCodes.describeWithIcon(day.weatherCode()),
-                    format(day.highTemperature()) + " C",
-                    format(day.lowTemperature()) + " C",
+                    format(day.highTemperature()) + " °C",
+                    format(day.lowTemperature()) + " °C",
                     format(day.precipitation()) + " mm",
                     format(day.maxWindSpeed()) + " km/h"
             });
@@ -363,14 +368,14 @@ public class DashboardPanel extends SkyBackgroundPanel {
             for (SearchHistoryItem item : items) {
                 historyModel.addRow(new Object[]{
                         item.displayCity(),
-                        format(item.temperature()) + " C",
+                        format(item.temperature()) + " °C",
                         WeatherCodes.describeWithIcon(item.weatherCode()),
                         item.searchedAt()
                 });
             }
         } catch (SQLException ex) {
             historyModel.setRowCount(0);
-            historyModel.addRow(new Object[]{"History unavailable", "", "", ""});
+            historyModel.addRow(new Object[]{"Historiku nuk është i disponueshëm", "", "", ""});
         }
     }
 
@@ -384,18 +389,18 @@ public class DashboardPanel extends SkyBackgroundPanel {
 
     private void saveCurrentCity() {
         if (user == null || currentWeather == null) {
-            JOptionPane.showMessageDialog(this, "Search for a city first.", "No City Loaded", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Kërko fillimisht një qytet.", "Nuk ka qytet të ngarkuar", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
         try {
             app.authService().updatePreferredCity(user, currentWeather.location().name());
-            statusLabel.setText(currentWeather.location().displayName() + " is now your saved city.");
+            statusLabel.setText(currentWeather.location().displayName() + " u ruajt si qyteti yt i preferuar.");
         } catch (SQLException ex) {
             JOptionPane.showMessageDialog(
                     this,
-                    "Could not save the city.\n\n" + ex.getMessage(),
-                    "Save Failed",
+                    "Qyteti nuk mund të ruhej.\n\n" + ex.getMessage(),
+                    "Ruajtja dështoi",
                     JOptionPane.ERROR_MESSAGE
             );
         }

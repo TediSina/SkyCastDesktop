@@ -57,21 +57,21 @@ public class AuthService {
             }
         } catch (SQLException ex) {
             if (ex.getMessage() != null && ex.getMessage().toLowerCase().contains("unique")) {
-                throw new AuthException("That username or email is already registered.");
+                throw new AuthException("Ky përdorues ose email është regjistruar tashmë.");
             }
             throw ex;
         } finally {
             clear(password);
         }
 
-        throw new AuthException("Registration failed. Please try again.");
+        throw new AuthException("Regjistrimi dështoi. Provo përsëri.");
     }
 
     public User login(String usernameOrEmail, char[] password) throws SQLException, AuthException {
         String login = trim(usernameOrEmail);
         if (login.isBlank() || password.length == 0) {
             clear(password);
-            throw new AuthException("Enter your username/email and password.");
+            throw new AuthException("Shkruaj përdoruesin/emailin dhe fjalëkalimin.");
         }
 
         String sql = """
@@ -88,14 +88,14 @@ public class AuthService {
 
             try (ResultSet result = statement.executeQuery()) {
                 if (!result.next()) {
-                    throw new AuthException("Invalid username/email or password.");
+                    throw new AuthException("Përdoruesi/emaili ose fjalëkalimi nuk është i saktë.");
                 }
 
                 byte[] salt = Base64.getDecoder().decode(result.getString("salt"));
                 String expected = result.getString("password_hash");
                 String actual = hashPassword(password, salt);
                 if (!expected.equals(actual)) {
-                    throw new AuthException("Invalid username/email or password.");
+                    throw new AuthException("Përdoruesi/emaili ose fjalëkalimi nuk është i saktë.");
                 }
 
                 return new User(
@@ -128,13 +128,13 @@ public class AuthService {
 
     private void validateRegistration(String username, String email, char[] password) throws AuthException {
         if (username.length() < 3) {
-            throw new AuthException("Username must be at least 3 characters.");
+            throw new AuthException("Përdoruesi duhet të ketë të paktën 3 karaktere.");
         }
         if (!email.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) {
-            throw new AuthException("Enter a valid email address.");
+            throw new AuthException("Shkruaj një adresë emaili të vlefshme.");
         }
         if (password.length < 6) {
-            throw new AuthException("Password must be at least 6 characters.");
+            throw new AuthException("Fjalëkalimi duhet të ketë të paktën 6 karaktere.");
         }
     }
 
@@ -144,7 +144,7 @@ public class AuthService {
             SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
             return Base64.getEncoder().encodeToString(factory.generateSecret(spec).getEncoded());
         } catch (NoSuchAlgorithmException | InvalidKeySpecException ex) {
-            throw new AuthException("Password hashing is not available on this Java runtime.");
+            throw new AuthException("Hashimi i fjalëkalimit nuk është i disponueshëm në këtë version të Java-s.");
         }
     }
 

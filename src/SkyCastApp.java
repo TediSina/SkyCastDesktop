@@ -13,7 +13,7 @@ public class SkyCastApp extends JFrame {
     private final DashboardPanel dashboardPanel;
 
     public SkyCastApp(Database database) {
-        super("SkyCast Desktop");
+        super("SkyCast për desktop");
         this.authService = new AuthService(database);
         this.weatherService = new WeatherService();
         this.loginPanel = new LoginPanel(this, authService);
@@ -25,7 +25,8 @@ public class SkyCastApp extends JFrame {
         root.add(dashboardPanel, "dashboard");
 
         setContentPane(root);
-        setMinimumSize(new Dimension(1120, 760));
+        setMinimumSize(new Dimension(1180, 1000));
+        setSize(new Dimension(1320, 1000));
         setLocationRelativeTo(null);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         showLogin();
@@ -37,14 +38,17 @@ public class SkyCastApp extends JFrame {
 
     public void showLogin() {
         cardLayout.show(root, "login");
+        getRootPane().setDefaultButton(loginPanel.defaultButton());
     }
 
     public void showRegistration() {
         cardLayout.show(root, "registration");
+        getRootPane().setDefaultButton(registrationPanel.defaultButton());
     }
 
     public void showDashboard(User user) {
         dashboardPanel.setUser(user);
         cardLayout.show(root, "dashboard");
+        getRootPane().setDefaultButton(dashboardPanel.defaultButton());
     }
 }

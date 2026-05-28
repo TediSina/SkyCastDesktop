@@ -18,8 +18,8 @@ public class Main {
                 ex.printStackTrace();
                 JOptionPane.showMessageDialog(
                         null,
-                        "SkyCast could not start.\n\n" + ex.getMessage(),
-                        "Startup Error",
+                        "SkyCast nuk mund të nisej.\n\n" + ex.getMessage(),
+                        "Gabim gjatë nisjes",
                         JOptionPane.ERROR_MESSAGE
                 );
             }

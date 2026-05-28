@@ -1,29 +1,30 @@
-# SkyCast Desktop
+# SkyCast për desktop
 
-SkyCast is a Java Swing weather app with registration, login, and dashboard forms.
-It stores users and recent weather searches in a local SQLite database at
-`data/skycast.db`, and it fetches live weather from Open-Meteo.
+SkyCast është një aplikacion moti në Java Swing me forma për regjistrim,
+hyrje dhe panel kryesor. Aplikacioni ruan përdoruesit dhe kërkimet e fundit
+të motit në bazën lokale SQLite `data/skycast.db`, ndërsa të dhënat e motit i
+merr drejtpërdrejt nga Open-Meteo.
 
-## Run in IntelliJ IDEA
+## Si të ekzekutohet në IntelliJ IDEA
 
-1. Open the project.
-2. Make sure the module classpath includes the jars in `lib/`.
-3. Run `src/Main.java`.
+1. Hape projektin në IntelliJ IDEA.
+2. Sigurohu që moduli të ketë në classpath skedarët `.jar` nga dosja `lib/`.
+3. Ekzekuto `src/Main.java`.
 
-The included jars are:
+Bibliotekat e përfshira janë:
 
 - `sqlite-jdbc-3.53.1.0.jar`
 - `slf4j-api-1.7.36.jar`
 - `slf4j-nop-1.7.36.jar`
 
-## Run from PowerShell
+## Si të ekzekutohet nga PowerShell
 
 ```powershell
 & 'C:\Program Files\Microsoft\jdk-17.0.13.11-hotspot\bin\javac.exe' -encoding UTF-8 -cp 'lib/*' -d out (Get-ChildItem src -Filter *.java | ForEach-Object { $_.FullName })
 & 'C:\Program Files\Microsoft\jdk-17.0.13.11-hotspot\bin\java.exe' -cp 'out;lib/*' Main
 ```
 
-## APIs
+## API-të
 
-- Geocoding: `https://geocoding-api.open-meteo.com/v1/search`
-- Forecast: `https://api.open-meteo.com/v1/forecast`
+- Gjeokodimi: `https://geocoding-api.open-meteo.com/v1/search`
+- Parashikimi: `https://api.open-meteo.com/v1/forecast`

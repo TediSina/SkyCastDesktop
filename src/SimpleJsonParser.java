@@ -17,7 +17,7 @@ public class SimpleJsonParser {
         if (value instanceof Map<?, ?> map) {
             return (Map<String, Object>) map;
         }
-        throw new IllegalArgumentException("JSON root is not an object.");
+        throw new IllegalArgumentException("Rrënja e JSON-it nuk është objekt.");
     }
 
     private Object parse() {
@@ -25,7 +25,7 @@ public class SimpleJsonParser {
         Object value = readValue();
         skipWhitespace();
         if (index != json.length()) {
-            throw error("Unexpected trailing JSON content");
+            throw error("Përmbajtje e papritur në fund të JSON-it");
         }
         return value;
     }
@@ -33,7 +33,7 @@ public class SimpleJsonParser {
     private Object readValue() {
         skipWhitespace();
         if (index >= json.length()) {
-            throw error("Unexpected end of JSON");
+            throw error("JSON-i përfundoi papritur");
         }
 
         char current = json.charAt(index);
@@ -48,7 +48,7 @@ public class SimpleJsonParser {
                 if (current == '-' || Character.isDigit(current)) {
                     yield readNumber();
                 }
-                throw error("Unexpected JSON token");
+                throw error("Element i papritur në JSON");
             }
         };
     }
@@ -111,7 +111,7 @@ public class SimpleJsonParser {
                 continue;
             }
             if (index >= json.length()) {
-                throw error("Unfinished string escape");
+                throw error("Sekuencë ikjeje e papërfunduar në tekst");
             }
             char escaped = json.charAt(index++);
             switch (escaped) {
@@ -124,15 +124,15 @@ public class SimpleJsonParser {
                 case 'r' -> builder.append('\r');
                 case 't' -> builder.append('\t');
                 case 'u' -> builder.append(readUnicode());
-                default -> throw error("Unsupported string escape");
+                default -> throw error("Sekuencë ikjeje e pambështetur në tekst");
             }
         }
-        throw error("Unterminated JSON string");
+        throw error("Tekst JSON i pambyllur");
     }
 
     private char readUnicode() {
         if (index + 4 > json.length()) {
-            throw error("Invalid unicode escape");
+            throw error("Sekuencë unicode e pavlefshme");
         }
         String hex = json.substring(index, index + 4);
         index += 4;
@@ -165,13 +165,13 @@ public class SimpleJsonParser {
             index++;
         }
         if (start == index) {
-            throw error("Expected a number");
+            throw error("Pritej një numër");
         }
     }
 
     private Object readLiteral(String literal, Object value) {
         if (!json.startsWith(literal, index)) {
-            throw error("Invalid JSON literal");
+            throw error("Vlerë JSON e pavlefshme");
         }
         index += literal.length();
         return value;
@@ -185,7 +185,7 @@ public class SimpleJsonParser {
 
     private void expect(char expected) {
         if (index >= json.length() || json.charAt(index) != expected) {
-            throw error("Expected '" + expected + "'");
+            throw error("Pritej '" + expected + "'");
         }
         index++;
     }
@@ -195,6 +195,6 @@ public class SimpleJsonParser {
     }
 
     private IllegalArgumentException error(String message) {
-        return new IllegalArgumentException(message + " at character " + index + ".");
+        return new IllegalArgumentException(message + " në karakterin " + index + ".");
     }
 }
