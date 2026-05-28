@@ -1,4 +1,5 @@
 import java.awt.BorderLayout;
+import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
@@ -10,7 +11,7 @@ import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 
-public class RegistrationPanel extends JPanel {
+public class RegistrationPanel extends SkyBackgroundPanel {
     private final SkyCastApp app;
     private final AuthService authService;
     private final JTextField usernameField = AppTheme.textField();
@@ -25,13 +26,22 @@ public class RegistrationPanel extends JPanel {
 
         cityField.setText("Tirana");
         setLayout(new GridBagLayout());
-        setBackground(AppTheme.BACKGROUND);
-        add(createCard());
+        setBorder(AppTheme.cardBorder());
+        add(createShell());
+    }
+
+    private JPanel createShell() {
+        JPanel shell = new JPanel(new BorderLayout(0, 0));
+        shell.setOpaque(false);
+        shell.setPreferredSize(new Dimension(980, 560));
+        shell.add(new AuthShowcasePanel("Your city,\nat a glance"), BorderLayout.WEST);
+        shell.add(createCard(), BorderLayout.CENTER);
+        return shell;
     }
 
     private JPanel createCard() {
-        JPanel card = new JPanel(new BorderLayout(0, 20));
-        card.setBackground(AppTheme.SURFACE);
+        SurfacePanel card = new SurfacePanel();
+        card.setLayout(new BorderLayout(0, 22));
         card.setBorder(AppTheme.cardBorder());
 
         JPanel heading = new JPanel(new GridBagLayout());
@@ -40,10 +50,13 @@ public class RegistrationPanel extends JPanel {
         constraints.gridx = 0;
         constraints.gridy = 0;
         constraints.anchor = GridBagConstraints.WEST;
-        heading.add(AppTheme.title("Create Account"), constraints);
+        heading.add(AppTheme.eyebrow("NEW PROFILE"), constraints);
         constraints.gridy = 1;
+        constraints.insets = new Insets(10, 0, 0, 0);
+        heading.add(AppTheme.display("Create account"), constraints);
+        constraints.gridy = 2;
         constraints.insets = new Insets(8, 0, 0, 0);
-        heading.add(AppTheme.muted("Save your favorite city and keep a local search history."), constraints);
+        heading.add(AppTheme.muted("Save a preferred city and keep recent searches locally."), constraints);
 
         JPanel fields = new JPanel(new GridBagLayout());
         fields.setOpaque(false);
@@ -70,7 +83,7 @@ public class RegistrationPanel extends JPanel {
     }
 
     private void addField(JPanel parent, int x, int y, String label, JTextField field) {
-        JPanel group = new JPanel(new BorderLayout(0, 5));
+        JPanel group = new JPanel(new BorderLayout(0, 6));
         group.setOpaque(false);
         JLabel text = new JLabel(label);
         text.setFont(AppTheme.BODY_BOLD);
@@ -83,7 +96,7 @@ public class RegistrationPanel extends JPanel {
         constraints.gridy = y;
         constraints.fill = GridBagConstraints.HORIZONTAL;
         constraints.weightx = 1;
-        constraints.insets = new Insets(y == 0 ? 0 : 14, x == 0 ? 0 : 14, 0, 0);
+        constraints.insets = new Insets(y == 0 ? 0 : 15, x == 0 ? 0 : 16, 0, 0);
         parent.add(group, constraints);
     }
 

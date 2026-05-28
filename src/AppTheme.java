@@ -1,5 +1,4 @@
 import java.awt.Color;
-import java.awt.Cursor;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.Insets;
@@ -8,24 +7,30 @@ import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPasswordField;
+import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.UIManager;
 import javax.swing.border.Border;
 
 public final class AppTheme {
-    public static final Color BACKGROUND = new Color(244, 248, 250);
+    public static final Color BACKGROUND = new Color(238, 246, 248);
     public static final Color SURFACE = Color.WHITE;
-    public static final Color TEXT = new Color(33, 45, 53);
-    public static final Color MUTED = new Color(102, 118, 128);
-    public static final Color PRIMARY = new Color(16, 128, 132);
-    public static final Color PRIMARY_DARK = new Color(9, 93, 99);
+    public static final Color TEXT = new Color(25, 38, 47);
+    public static final Color MUTED = new Color(93, 112, 124);
+    public static final Color PRIMARY = new Color(0, 132, 141);
+    public static final Color PRIMARY_DARK = new Color(7, 79, 91);
+    public static final Color OCEAN = new Color(22, 117, 170);
     public static final Color ACCENT = new Color(238, 139, 62);
-    public static final Color BORDER = new Color(216, 226, 231);
-    public static final Color FIELD = new Color(250, 253, 254);
+    public static final Color SUN = new Color(255, 190, 82);
+    public static final Color MINT = new Color(88, 190, 166);
+    public static final Color BORDER = new Color(206, 222, 228);
+    public static final Color FIELD = new Color(249, 253, 254);
     public static final Font BODY = new Font("Segoe UI", Font.PLAIN, 14);
     public static final Font BODY_BOLD = new Font("Segoe UI", Font.BOLD, 14);
-    public static final Font TITLE = new Font("Segoe UI", Font.BOLD, 30);
-    public static final Font SECTION = new Font("Segoe UI", Font.BOLD, 18);
+    public static final Font DISPLAY = new Font("Bahnschrift", Font.BOLD, 34);
+    public static final Font TITLE = new Font("Bahnschrift", Font.BOLD, 30);
+    public static final Font SECTION = new Font("Bahnschrift", Font.BOLD, 18);
+    public static final Font SMALL_CAP = new Font("Bahnschrift", Font.BOLD, 12);
 
     private AppTheme() {
     }
@@ -37,29 +42,37 @@ public final class AppTheme {
         UIManager.put("TextField.font", BODY);
         UIManager.put("PasswordField.font", BODY);
         UIManager.put("Table.font", BODY);
-        UIManager.put("Table.rowHeight", 34);
+        UIManager.put("Table.rowHeight", 40);
         UIManager.put("TableHeader.font", BODY_BOLD);
         UIManager.put("OptionPane.messageFont", BODY);
         UIManager.put("OptionPane.buttonFont", BODY_BOLD);
     }
 
     public static Border cardBorder() {
-        return BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(BORDER),
-                BorderFactory.createEmptyBorder(22, 24, 22, 24)
-        );
+        return BorderFactory.createEmptyBorder(22, 24, 22, 24);
+    }
+
+    public static Border compactCardBorder() {
+        return BorderFactory.createEmptyBorder(18, 20, 18, 20);
     }
 
     public static Border inputBorder() {
         return BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(BORDER),
-                BorderFactory.createEmptyBorder(9, 12, 9, 12)
+                BorderFactory.createLineBorder(new Color(192, 214, 222)),
+                BorderFactory.createEmptyBorder(10, 13, 10, 13)
         );
     }
 
     public static JLabel title(String text) {
         JLabel label = new JLabel(text);
         label.setFont(TITLE);
+        label.setForeground(TEXT);
+        return label;
+    }
+
+    public static JLabel display(String text) {
+        JLabel label = new JLabel(text);
+        label.setFont(DISPLAY);
         label.setForeground(TEXT);
         return label;
     }
@@ -78,6 +91,13 @@ public final class AppTheme {
         return label;
     }
 
+    public static JLabel eyebrow(String text) {
+        JLabel label = new JLabel(text);
+        label.setFont(SMALL_CAP);
+        label.setForeground(PRIMARY);
+        return label;
+    }
+
     public static JTextField textField() {
         JTextField field = new JTextField();
         styleInput(field);
@@ -91,36 +111,35 @@ public final class AppTheme {
     }
 
     public static JButton primaryButton(String text) {
-        JButton button = button(text, PRIMARY, Color.WHITE);
-        button.setRolloverEnabled(true);
-        return button;
+        return new GradientButton(text, PRIMARY, OCEAN, Color.WHITE, false);
     }
 
     public static JButton secondaryButton(String text) {
-        return button(text, SURFACE, PRIMARY);
+        return new GradientButton(text, Color.WHITE, new Color(240, 248, 249), PRIMARY_DARK, true);
     }
 
     public static JButton warmButton(String text) {
-        return button(text, ACCENT, Color.WHITE);
+        return new GradientButton(text, ACCENT, SUN, Color.WHITE, false);
     }
 
-    private static JButton button(String text, Color background, Color foreground) {
-        JButton button = new JButton(text);
-        button.setFocusPainted(false);
-        button.setBorderPainted(false);
-        button.setOpaque(true);
-        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        button.setBackground(background);
-        button.setForeground(foreground);
-        button.setMargin(new Insets(10, 16, 10, 16));
-        button.setPreferredSize(new Dimension(120, 42));
-        return button;
+    public static void styleTable(JTable table) {
+        table.setFillsViewportHeight(true);
+        table.setShowGrid(false);
+        table.setIntercellSpacing(new Dimension(0, 0));
+        table.setRowHeight(42);
+        table.setSelectionBackground(new Color(213, 241, 239));
+        table.setSelectionForeground(TEXT);
+        table.getTableHeader().setReorderingAllowed(false);
+        table.getTableHeader().setBackground(new Color(232, 244, 247));
+        table.getTableHeader().setForeground(PRIMARY_DARK);
+        table.getTableHeader().setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+        table.setDefaultRenderer(Object.class, new WeatherTableCellRenderer());
     }
 
     private static void styleInput(JComponent field) {
         field.setBackground(FIELD);
         field.setForeground(TEXT);
         field.setBorder(inputBorder());
-        field.setPreferredSize(new Dimension(260, 42));
+        field.setPreferredSize(new Dimension(282, 44));
     }
 }

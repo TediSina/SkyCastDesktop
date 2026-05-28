@@ -1,4 +1,5 @@
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
@@ -19,7 +20,7 @@ import javax.swing.JTextField;
 import javax.swing.SwingWorker;
 import javax.swing.table.DefaultTableModel;
 
-public class DashboardPanel extends JPanel {
+public class DashboardPanel extends SkyBackgroundPanel {
     private final SkyCastApp app;
     private final Database database;
     private final WeatherService weatherService;
@@ -35,6 +36,7 @@ public class DashboardPanel extends JPanel {
     private final JLabel statusLabel = AppTheme.muted("Search a city to load live Open-Meteo weather.");
     private final JLabel locationLabel = AppTheme.section("No city loaded");
     private final WeatherIconView weatherIconView = new WeatherIconView();
+    private final WeatherCardPanel currentWeatherCard = new WeatherCardPanel();
     private final JLabel temperatureLabel = new JLabel("-- C");
     private final JLabel conditionLabel = AppTheme.muted("Current conditions will appear here.");
     private final JLabel feelsLikeLabel = valueLabel("--");
@@ -65,7 +67,6 @@ public class DashboardPanel extends JPanel {
         this.weatherService = weatherService;
 
         setLayout(new BorderLayout(18, 18));
-        setBackground(AppTheme.BACKGROUND);
         setBorder(BorderFactory.createEmptyBorder(22, 24, 24, 24));
 
         add(createHeader(), BorderLayout.NORTH);
@@ -99,8 +100,9 @@ public class DashboardPanel extends JPanel {
     }
 
     private JPanel createHeader() {
-        JPanel header = new JPanel(new BorderLayout(16, 8));
-        header.setOpaque(false);
+        SurfacePanel header = new SurfacePanel(new Color(255, 255, 255, 220), new Color(196, 218, 224));
+        header.setLayout(new BorderLayout(16, 8));
+        header.setBorder(AppTheme.compactCardBorder());
 
         JPanel titlePanel = new JPanel(new GridBagLayout());
         titlePanel.setOpaque(false);
@@ -108,12 +110,15 @@ public class DashboardPanel extends JPanel {
         constraints.gridx = 0;
         constraints.gridy = 0;
         constraints.anchor = GridBagConstraints.WEST;
-        titlePanel.add(AppTheme.title("SkyCast"), constraints);
+        titlePanel.add(AppTheme.display("SkyCast"), constraints);
         constraints.gridy = 1;
         titlePanel.add(welcomeLabel, constraints);
 
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         actions.setOpaque(false);
+        JLabel liveLabel = AppTheme.eyebrow("OPEN-METEO LIVE");
+        liveLabel.setBorder(BorderFactory.createEmptyBorder(11, 0, 0, 12));
+        actions.add(liveLabel);
         actions.add(logoutButton);
 
         header.add(titlePanel, BorderLayout.WEST);
@@ -148,9 +153,9 @@ public class DashboardPanel extends JPanel {
     }
 
     private JPanel createSearchPanel() {
-        JPanel panel = new JPanel(new BorderLayout(14, 8));
-        panel.setBackground(AppTheme.SURFACE);
-        panel.setBorder(AppTheme.cardBorder());
+        SurfacePanel panel = new SurfacePanel(new Color(255, 255, 255, 232), new Color(194, 218, 226));
+        panel.setLayout(new BorderLayout(14, 8));
+        panel.setBorder(AppTheme.compactCardBorder());
 
         JPanel row = new JPanel(new BorderLayout(10, 0));
         row.setOpaque(false);
@@ -170,13 +175,16 @@ public class DashboardPanel extends JPanel {
     }
 
     private JPanel createCurrentWeatherPanel() {
-        JPanel panel = new JPanel(new BorderLayout(12, 16));
-        panel.setBackground(AppTheme.SURFACE);
+        WeatherCardPanel panel = currentWeatherCard;
+        panel.setLayout(new BorderLayout(12, 16));
         panel.setBorder(AppTheme.cardBorder());
-        panel.setPreferredSize(new Dimension(420, 360));
+        panel.setPreferredSize(new Dimension(430, 370));
 
         JPanel top = new JPanel(new GridBagLayout());
         top.setOpaque(false);
+        locationLabel.setForeground(Color.WHITE);
+        conditionLabel.setForeground(new Color(230, 249, 250));
+        observedLabel.setForeground(new Color(221, 241, 244));
         GridBagConstraints constraints = new GridBagConstraints();
         constraints.gridx = 0;
         constraints.gridy = 0;
@@ -186,7 +194,7 @@ public class DashboardPanel extends JPanel {
         top.add(conditionLabel, constraints);
 
         temperatureLabel.setFont(new Font("Segoe UI", Font.BOLD, 56));
-        temperatureLabel.setForeground(AppTheme.PRIMARY_DARK);
+        temperatureLabel.setForeground(Color.WHITE);
         constraints.gridy = 2;
         constraints.insets = new Insets(12, 0, 0, 0);
         top.add(temperatureLabel, constraints);
@@ -214,46 +222,47 @@ public class DashboardPanel extends JPanel {
     }
 
     private JPanel createForecastPanel() {
-        JPanel panel = new JPanel(new BorderLayout(10, 12));
-        panel.setBackground(AppTheme.SURFACE);
+        SurfacePanel panel = new SurfacePanel();
+        panel.setLayout(new BorderLayout(10, 12));
         panel.setBorder(AppTheme.cardBorder());
 
         JTable table = new JTable(forecastModel);
-        table.setFillsViewportHeight(true);
-        table.setShowGrid(false);
+        AppTheme.styleTable(table);
         table.setRowSelectionAllowed(false);
-        table.getTableHeader().setReorderingAllowed(false);
+        JScrollPane scrollPane = new JScrollPane(table);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+        scrollPane.getViewport().setBackground(Color.WHITE);
 
         panel.add(AppTheme.section("7-Day Forecast"), BorderLayout.NORTH);
-        panel.add(new JScrollPane(table), BorderLayout.CENTER);
+        panel.add(scrollPane, BorderLayout.CENTER);
         return panel;
     }
 
     private JPanel createHistoryPanel() {
-        JPanel panel = new JPanel(new BorderLayout(10, 12));
-        panel.setBackground(AppTheme.SURFACE);
+        SurfacePanel panel = new SurfacePanel(new Color(255, 255, 255, 236), new Color(197, 218, 226));
+        panel.setLayout(new BorderLayout(10, 12));
         panel.setBorder(AppTheme.cardBorder());
         panel.setPreferredSize(new Dimension(0, 210));
 
         JTable table = new JTable(historyModel);
-        table.setFillsViewportHeight(true);
-        table.setShowGrid(false);
+        AppTheme.styleTable(table);
         table.setRowSelectionAllowed(false);
-        table.getTableHeader().setReorderingAllowed(false);
+        JScrollPane scrollPane = new JScrollPane(table);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+        scrollPane.getViewport().setBackground(Color.WHITE);
 
         panel.add(AppTheme.section("Recent Searches"), BorderLayout.NORTH);
-        panel.add(new JScrollPane(table), BorderLayout.CENTER);
+        panel.add(scrollPane, BorderLayout.CENTER);
         return panel;
     }
 
     private void addMetric(JPanel panel, int x, int y, String label, JLabel value) {
-        JPanel metric = new JPanel(new BorderLayout(2, 4));
-        metric.setOpaque(false);
-        metric.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(AppTheme.BORDER),
-                BorderFactory.createEmptyBorder(12, 14, 12, 14)
-        ));
-        metric.add(AppTheme.muted(label), BorderLayout.NORTH);
+        SurfacePanel metric = new SurfacePanel(new Color(255, 255, 255, 215), new Color(255, 255, 255, 80));
+        metric.setLayout(new BorderLayout(2, 4));
+        metric.setBorder(BorderFactory.createEmptyBorder(12, 14, 12, 14));
+        JLabel metricLabel = AppTheme.muted(label);
+        metricLabel.setForeground(new Color(66, 86, 96));
+        metric.add(metricLabel, BorderLayout.NORTH);
         metric.add(value, BorderLayout.CENTER);
 
         GridBagConstraints constraints = new GridBagConstraints();
@@ -319,6 +328,7 @@ public class DashboardPanel extends JPanel {
     private void showWeather(WeatherData weather) {
         currentWeather = weather;
         saveCityButton.setEnabled(true);
+        currentWeatherCard.setWeatherCode(weather.weatherCode());
         locationLabel.setText(weather.location().displayName());
         weatherIconView.setIcon(WeatherCodes.icon(weather.weatherCode()));
         conditionLabel.setText(WeatherCodes.describeWithIcon(weather.weatherCode()));

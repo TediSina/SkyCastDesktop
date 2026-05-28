@@ -25,7 +25,7 @@ public class SkyCastApp extends JFrame {
         root.add(dashboardPanel, "dashboard");
 
         setContentPane(root);
-        setMinimumSize(new Dimension(1040, 720));
+        setMinimumSize(new Dimension(1120, 760));
         setLocationRelativeTo(null);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         showLogin();

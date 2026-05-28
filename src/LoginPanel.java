@@ -1,9 +1,9 @@
 import java.awt.BorderLayout;
+import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
-import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -11,7 +11,7 @@ import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 
-public class LoginPanel extends JPanel {
+public class LoginPanel extends SkyBackgroundPanel {
     private final SkyCastApp app;
     private final AuthService authService;
     private final JTextField loginField = AppTheme.textField();
@@ -22,13 +22,22 @@ public class LoginPanel extends JPanel {
         this.authService = authService;
 
         setLayout(new GridBagLayout());
-        setBackground(AppTheme.BACKGROUND);
-        add(createCard());
+        setBorder(AppTheme.cardBorder());
+        add(createShell());
+    }
+
+    private JPanel createShell() {
+        JPanel shell = new JPanel(new BorderLayout(0, 0));
+        shell.setOpaque(false);
+        shell.setPreferredSize(new Dimension(860, 520));
+        shell.add(new AuthShowcasePanel("Forecasts\nwith focus"), BorderLayout.WEST);
+        shell.add(createCard(), BorderLayout.CENTER);
+        return shell;
     }
 
     private JPanel createCard() {
-        JPanel card = new JPanel(new BorderLayout(0, 22));
-        card.setBackground(AppTheme.SURFACE);
+        SurfacePanel card = new SurfacePanel();
+        card.setLayout(new BorderLayout(0, 24));
         card.setBorder(AppTheme.cardBorder());
 
         JPanel heading = new JPanel(new GridBagLayout());
@@ -37,10 +46,13 @@ public class LoginPanel extends JPanel {
         constraints.gridx = 0;
         constraints.gridy = 0;
         constraints.anchor = GridBagConstraints.WEST;
-        heading.add(AppTheme.title("Welcome Back"), constraints);
+        heading.add(AppTheme.eyebrow("LOCAL ACCOUNT"), constraints);
         constraints.gridy = 1;
+        constraints.insets = new Insets(10, 0, 0, 0);
+        heading.add(AppTheme.display("Welcome back"), constraints);
+        constraints.gridy = 2;
         constraints.insets = new Insets(8, 0, 0, 0);
-        heading.add(AppTheme.muted("Sign in to check your saved city and recent forecasts."), constraints);
+        heading.add(AppTheme.muted("Check your saved city and latest weather history."), constraints);
 
         JPanel fields = new JPanel(new GridBagLayout());
         fields.setOpaque(false);
@@ -69,7 +81,7 @@ public class LoginPanel extends JPanel {
         constraints.gridx = 0;
         constraints.gridy = row * 2;
         constraints.anchor = GridBagConstraints.WEST;
-        constraints.insets = new Insets(row == 0 ? 0 : 14, 0, 5, 0);
+        constraints.insets = new Insets(row == 0 ? 0 : 16, 0, 6, 0);
         JLabel text = new JLabel(label);
         text.setFont(AppTheme.BODY_BOLD);
         text.setForeground(AppTheme.TEXT);
