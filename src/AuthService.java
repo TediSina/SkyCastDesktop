@@ -1,0 +1,163 @@
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.KeySpec;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.Base64;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
+
+public class AuthService {
+    private static final int SALT_BYTES = 16;
+    private static final int HASH_BITS = 256;
+    private static final int ITERATIONS = 120_000;
+
+    private final Database database;
+    private final SecureRandom random = new SecureRandom();
+
+    public AuthService(Database database) {
+        this.database = database;
+    }
+
+    public User register(String username, String email, char[] password, String preferredCity)
+            throws SQLException, AuthException {
+        String cleanUsername = trim(username);
+        String cleanEmail = trim(email);
+        String cleanCity = trim(preferredCity);
+
+        validateRegistration(cleanUsername, cleanEmail, password);
+
+        byte[] salt = new byte[SALT_BYTES];
+        random.nextBytes(salt);
+        String saltText = Base64.getEncoder().encodeToString(salt);
+        String hashText = hashPassword(password, salt);
+
+        String sql = """
+                INSERT INTO users (username, email, password_hash, salt, preferred_city)
+                VALUES (?, ?, ?, ?, ?)
+                """;
+
+        try (Connection connection = database.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            statement.setString(1, cleanUsername);
+            statement.setString(2, cleanEmail);
+            statement.setString(3, hashText);
+            statement.setString(4, saltText);
+            statement.setString(5, cleanCity.isBlank() ? "Tirana" : cleanCity);
+            statement.executeUpdate();
+
+            try (ResultSet keys = statement.getGeneratedKeys()) {
+                if (keys.next()) {
+                    return new User(keys.getInt(1), cleanUsername, cleanEmail, cleanCity.isBlank() ? "Tirana" : cleanCity);
+                }
+            }
+        } catch (SQLException ex) {
+            if (ex.getMessage() != null && ex.getMessage().toLowerCase().contains("unique")) {
+                throw new AuthException("That username or email is already registered.");
+            }
+            throw ex;
+        } finally {
+            clear(password);
+        }
+
+        throw new AuthException("Registration failed. Please try again.");
+    }
+
+    public User login(String usernameOrEmail, char[] password) throws SQLException, AuthException {
+        String login = trim(usernameOrEmail);
+        if (login.isBlank() || password.length == 0) {
+            clear(password);
+            throw new AuthException("Enter your username/email and password.");
+        }
+
+        String sql = """
+                SELECT id, username, email, password_hash, salt, preferred_city
+                FROM users
+                WHERE lower(username) = lower(?) OR lower(email) = lower(?)
+                LIMIT 1
+                """;
+
+        try (Connection connection = database.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+            statement.setString(1, login);
+            statement.setString(2, login);
+
+            try (ResultSet result = statement.executeQuery()) {
+                if (!result.next()) {
+                    throw new AuthException("Invalid username/email or password.");
+                }
+
+                byte[] salt = Base64.getDecoder().decode(result.getString("salt"));
+                String expected = result.getString("password_hash");
+                String actual = hashPassword(password, salt);
+                if (!expected.equals(actual)) {
+                    throw new AuthException("Invalid username/email or password.");
+                }
+
+                return new User(
+                        result.getInt("id"),
+                        result.getString("username"),
+                        result.getString("email"),
+                        result.getString("preferred_city")
+                );
+            }
+        } finally {
+            clear(password);
+        }
+    }
+
+    public void updatePreferredCity(User user, String city) throws SQLException {
+        String cleanCity = trim(city);
+        if (cleanCity.isBlank()) {
+            return;
+        }
+
+        try (Connection connection = database.getConnection();
+             PreparedStatement statement = connection.prepareStatement(
+                     "UPDATE users SET preferred_city = ? WHERE id = ?")) {
+            statement.setString(1, cleanCity);
+            statement.setInt(2, user.id());
+            statement.executeUpdate();
+        }
+        user.setPreferredCity(cleanCity);
+    }
+
+    private void validateRegistration(String username, String email, char[] password) throws AuthException {
+        if (username.length() < 3) {
+            throw new AuthException("Username must be at least 3 characters.");
+        }
+        if (!email.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) {
+            throw new AuthException("Enter a valid email address.");
+        }
+        if (password.length < 6) {
+            throw new AuthException("Password must be at least 6 characters.");
+        }
+    }
+
+    private String hashPassword(char[] password, byte[] salt) throws AuthException {
+        try {
+            KeySpec spec = new PBEKeySpec(password, salt, ITERATIONS, HASH_BITS);
+            SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+            return Base64.getEncoder().encodeToString(factory.generateSecret(spec).getEncoded());
+        } catch (NoSuchAlgorithmException | InvalidKeySpecException ex) {
+            throw new AuthException("Password hashing is not available on this Java runtime.");
+        }
+    }
+
+    private String trim(String value) {
+        return value == null ? "" : value.trim();
+    }
+
+    private void clear(char[] value) {
+        if (value == null) {
+            return;
+        }
+        for (int i = 0; i < value.length; i++) {
+            value[i] = '\0';
+        }
+    }
+}
