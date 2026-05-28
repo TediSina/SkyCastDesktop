@@ -25,13 +25,16 @@ public class DashboardPanel extends JPanel {
     private final WeatherService weatherService;
 
     private User user;
+    private WeatherData currentWeather;
     private final JTextField cityField = AppTheme.textField();
     private final JButton searchButton = AppTheme.primaryButton("Search");
-    private final JButton savedCityButton = AppTheme.secondaryButton("Saved City");
+    private final JButton loadSavedCityButton = AppTheme.secondaryButton("Load Saved");
+    private final JButton saveCityButton = AppTheme.warmButton("Save City");
     private final JButton logoutButton = AppTheme.secondaryButton("Logout");
     private final JLabel welcomeLabel = AppTheme.section("");
     private final JLabel statusLabel = AppTheme.muted("Search a city to load live Open-Meteo weather.");
     private final JLabel locationLabel = AppTheme.section("No city loaded");
+    private final WeatherIconView weatherIconView = new WeatherIconView();
     private final JLabel temperatureLabel = new JLabel("-- C");
     private final JLabel conditionLabel = AppTheme.muted("Current conditions will appear here.");
     private final JLabel feelsLikeLabel = valueLabel("--");
@@ -68,18 +71,25 @@ public class DashboardPanel extends JPanel {
         add(createHeader(), BorderLayout.NORTH);
         add(createContent(), BorderLayout.CENTER);
 
+        loadSavedCityButton.setToolTipText("Loads the preferred city saved on your account.");
+        saveCityButton.setToolTipText("Saves the city currently displayed as your preferred city.");
+        saveCityButton.setEnabled(false);
+
         searchButton.addActionListener(event -> searchCurrentCity());
-        savedCityButton.addActionListener(event -> {
+        loadSavedCityButton.addActionListener(event -> {
             if (user != null) {
                 cityField.setText(user.preferredCity());
                 searchCurrentCity();
             }
         });
+        saveCityButton.addActionListener(event -> saveCurrentCity());
         logoutButton.addActionListener(event -> app.showLogin());
     }
 
     public void setUser(User user) {
         this.user = user;
+        this.currentWeather = null;
+        saveCityButton.setEnabled(false);
         welcomeLabel.setText("Welcome, " + user.username());
         cityField.setText(user.preferredCity());
         loadHistory();
@@ -148,7 +158,8 @@ public class DashboardPanel extends JPanel {
 
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         actions.setOpaque(false);
-        actions.add(savedCityButton);
+        actions.add(loadSavedCityButton);
+        actions.add(saveCityButton);
         actions.add(searchButton);
         row.add(actions, BorderLayout.EAST);
 
@@ -182,6 +193,13 @@ public class DashboardPanel extends JPanel {
         constraints.gridy = 3;
         constraints.insets = new Insets(0, 0, 0, 0);
         top.add(observedLabel, constraints);
+
+        constraints.gridx = 1;
+        constraints.gridy = 0;
+        constraints.gridheight = 4;
+        constraints.insets = new Insets(0, 28, 0, 0);
+        constraints.anchor = GridBagConstraints.NORTHWEST;
+        top.add(weatherIconView, constraints);
 
         JPanel details = new JPanel(new GridBagLayout());
         details.setOpaque(false);
@@ -279,7 +297,6 @@ public class DashboardPanel extends JPanel {
                     WeatherData weather = get();
                     showWeather(weather);
                     database.saveWeatherSearch(activeUser, weather);
-                    app.authService().updatePreferredCity(activeUser, weather.location().name());
                     loadHistory();
                     statusLabel.setText("Live data loaded from Open-Meteo.");
                 } catch (Exception ex) {
@@ -300,8 +317,11 @@ public class DashboardPanel extends JPanel {
     }
 
     private void showWeather(WeatherData weather) {
+        currentWeather = weather;
+        saveCityButton.setEnabled(true);
         locationLabel.setText(weather.location().displayName());
-        conditionLabel.setText(WeatherCodes.describe(weather.weatherCode()));
+        weatherIconView.setIcon(WeatherCodes.icon(weather.weatherCode()));
+        conditionLabel.setText(WeatherCodes.describeWithIcon(weather.weatherCode()));
         temperatureLabel.setText(format(weather.temperature()) + " C");
         feelsLikeLabel.setText(format(weather.apparentTemperature()) + " C");
         humidityLabel.setText(weather.humidity() + "%");
@@ -313,7 +333,7 @@ public class DashboardPanel extends JPanel {
         for (DailyForecast day : weather.dailyForecasts()) {
             forecastModel.addRow(new Object[]{
                     day.date(),
-                    WeatherCodes.describe(day.weatherCode()),
+                    WeatherCodes.describeWithIcon(day.weatherCode()),
                     format(day.highTemperature()) + " C",
                     format(day.lowTemperature()) + " C",
                     format(day.precipitation()) + " mm",
@@ -334,7 +354,7 @@ public class DashboardPanel extends JPanel {
                 historyModel.addRow(new Object[]{
                         item.displayCity(),
                         format(item.temperature()) + " C",
-                        WeatherCodes.describe(item.weatherCode()),
+                        WeatherCodes.describeWithIcon(item.weatherCode()),
                         item.searchedAt()
                 });
             }
@@ -346,9 +366,29 @@ public class DashboardPanel extends JPanel {
 
     private void setLoading(boolean loading, String text) {
         searchButton.setEnabled(!loading);
-        savedCityButton.setEnabled(!loading);
+        loadSavedCityButton.setEnabled(!loading);
+        saveCityButton.setEnabled(!loading && currentWeather != null);
         cityField.setEnabled(!loading);
         statusLabel.setText(text);
+    }
+
+    private void saveCurrentCity() {
+        if (user == null || currentWeather == null) {
+            JOptionPane.showMessageDialog(this, "Search for a city first.", "No City Loaded", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        try {
+            app.authService().updatePreferredCity(user, currentWeather.location().name());
+            statusLabel.setText(currentWeather.location().displayName() + " is now your saved city.");
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Could not save the city.\n\n" + ex.getMessage(),
+                    "Save Failed",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        }
     }
 
     private String format(double value) {

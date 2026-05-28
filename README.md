@@ -19,7 +19,7 @@ The included jars are:
 ## Run from PowerShell
 
 ```powershell
-& 'C:\Program Files\Microsoft\jdk-17.0.13.11-hotspot\bin\javac.exe' -cp 'lib/*' -d out (Get-ChildItem src -Filter *.java | ForEach-Object { $_.FullName })
+& 'C:\Program Files\Microsoft\jdk-17.0.13.11-hotspot\bin\javac.exe' -encoding UTF-8 -cp 'lib/*' -d out (Get-ChildItem src -Filter *.java | ForEach-Object { $_.FullName })
 & 'C:\Program Files\Microsoft\jdk-17.0.13.11-hotspot\bin\java.exe' -cp 'out;lib/*' Main
 ```
 

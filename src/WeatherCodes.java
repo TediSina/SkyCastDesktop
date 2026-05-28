@@ -22,4 +22,23 @@ public final class WeatherCodes {
             default -> "Unknown";
         };
     }
+
+    public static String icon(int code) {
+        return switch (code) {
+            case 0 -> "\u2600\uFE0F";
+            case 1 -> "\uD83C\uDF24\uFE0F";
+            case 2 -> "\u26C5";
+            case 3 -> "\u2601\uFE0F";
+            case 45, 48 -> "\uD83C\uDF2B\uFE0F";
+            case 51, 53, 55, 56, 57 -> "\uD83C\uDF26\uFE0F";
+            case 61, 63, 65, 66, 67, 80, 81, 82 -> "\uD83C\uDF27\uFE0F";
+            case 71, 73, 75, 77, 85, 86 -> "\u2744\uFE0F";
+            case 95, 96, 99 -> "\u26C8\uFE0F";
+            default -> "\uD83C\uDF21\uFE0F";
+        };
+    }
+
+    public static String describeWithIcon(int code) {
+        return icon(code) + " " + describe(code);
+    }
 }
