@@ -11,6 +11,9 @@ import java.util.Base64;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 
+/**
+ * Handles user registration, login, password hashing, and account preferences.
+ */
 public class AuthService {
     private static final int SALT_BYTES = 16;
     private static final int HASH_BITS = 256;
@@ -19,10 +22,26 @@ public class AuthService {
     private final Database database;
     private final SecureRandom random = new SecureRandom();
 
+    /**
+     * Creates an authentication service backed by the local SQLite database.
+     *
+     * @param database initialized database access object
+     */
     public AuthService(Database database) {
         this.database = database;
     }
 
+    /**
+     * Registers a new user and stores a salted password hash.
+     *
+     * @param username requested username
+     * @param email email address
+     * @param password raw password characters; cleared before this method returns
+     * @param preferredCity initial preferred city, defaults to Tirana when blank
+     * @return newly created user
+     * @throws SQLException when the database write fails
+     * @throws AuthException when validation fails or the account already exists
+     */
     public User register(String username, String email, char[] password, String preferredCity)
             throws SQLException, AuthException {
         String cleanUsername = trim(username);
@@ -67,6 +86,15 @@ public class AuthService {
         throw new AuthException("Regjistrimi dështoi. Provo përsëri.");
     }
 
+    /**
+     * Authenticates a user by username or email.
+     *
+     * @param usernameOrEmail username or email typed by the user
+     * @param password raw password characters; cleared before this method returns
+     * @return matching user when credentials are valid
+     * @throws SQLException when the database query fails
+     * @throws AuthException when credentials are blank or invalid
+     */
     public User login(String usernameOrEmail, char[] password) throws SQLException, AuthException {
         String login = trim(usernameOrEmail);
         if (login.isBlank() || password.length == 0) {
@@ -110,6 +138,13 @@ public class AuthService {
         }
     }
 
+    /**
+     * Persists the user's preferred city and updates the in-memory user object.
+     *
+     * @param user user whose preference should change
+     * @param city city name to store
+     * @throws SQLException when the database update fails
+     */
     public void updatePreferredCity(User user, String city) throws SQLException {
         String cleanCity = trim(city);
         if (cleanCity.isBlank()) {
@@ -126,6 +161,9 @@ public class AuthService {
         user.setPreferredCity(cleanCity);
     }
 
+    /**
+     * Validates account fields that are independent from persistence.
+     */
     private void validateRegistration(String username, String email, char[] password) throws AuthException {
         if (username.length() < 3) {
             throw new AuthException("Përdoruesi duhet të ketë të paktën 3 karaktere.");
@@ -138,8 +176,12 @@ public class AuthService {
         }
     }
 
+    /**
+     * Hashes a password with PBKDF2 and a per-user salt.
+     */
     private String hashPassword(char[] password, byte[] salt) throws AuthException {
         try {
+            // PBKDF2 keeps stored credentials safer than plain hashes if the DB is copied.
             KeySpec spec = new PBEKeySpec(password, salt, ITERATIONS, HASH_BITS);
             SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
             return Base64.getEncoder().encodeToString(factory.generateSecret(spec).getEncoded());
@@ -148,10 +190,16 @@ public class AuthService {
         }
     }
 
+    /**
+     * Null-safe string trim helper for form input.
+     */
     private String trim(String value) {
         return value == null ? "" : value.trim();
     }
 
+    /**
+     * Clears password arrays so sensitive text is not kept in memory longer than needed.
+     */
     private void clear(char[] value) {
         if (value == null) {
             return;

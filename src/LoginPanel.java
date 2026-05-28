@@ -11,6 +11,9 @@ import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 
+/**
+ * Login form for existing SkyCast users.
+ */
 public class LoginPanel extends SkyBackgroundPanel {
     private final SkyCastApp app;
     private final AuthService authService;
@@ -19,6 +22,12 @@ public class LoginPanel extends SkyBackgroundPanel {
     private final JButton loginButton = AppTheme.primaryButton("Hyr");
     private final JButton registerButton = AppTheme.secondaryButton("Krijo llogari");
 
+    /**
+     * Creates the login form and wires Enter-key login behavior.
+     *
+     * @param app parent frame used for navigation
+     * @param authService authentication service
+     */
     public LoginPanel(SkyCastApp app, AuthService authService) {
         this.app = app;
         this.authService = authService;
@@ -31,10 +40,18 @@ public class LoginPanel extends SkyBackgroundPanel {
         passwordField.addActionListener(event -> login());
     }
 
+    /**
+     * Returns the button used as this screen's default Enter action.
+     *
+     * @return login button
+     */
     public JButton defaultButton() {
         return loginButton;
     }
 
+    /**
+     * Builds the two-column login layout.
+     */
     private JPanel createShell() {
         JPanel shell = new JPanel(new BorderLayout(0, 0));
         shell.setOpaque(false);
@@ -44,6 +61,9 @@ public class LoginPanel extends SkyBackgroundPanel {
         return shell;
     }
 
+    /**
+     * Builds the form card that contains labels, fields, and actions.
+     */
     private JPanel createCard() {
         SurfacePanel card = new SurfacePanel();
         card.setLayout(new BorderLayout(0, 24));
@@ -82,6 +102,9 @@ public class LoginPanel extends SkyBackgroundPanel {
         return card;
     }
 
+    /**
+     * Adds a labeled input field to the login form.
+     */
     private void addField(JPanel parent, int row, String label, JTextField field) {
         GridBagConstraints constraints = new GridBagConstraints();
         constraints.gridx = 0;
@@ -100,6 +123,9 @@ public class LoginPanel extends SkyBackgroundPanel {
         parent.add(field, constraints);
     }
 
+    /**
+     * Validates credentials and navigates to the dashboard on success.
+     */
     private void login() {
         try {
             User user = authService.login(loginField.getText(), passwordField.getPassword());

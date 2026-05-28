@@ -3,6 +3,12 @@ import java.awt.Dimension;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 
+/**
+ * Main application frame and screen router.
+ *
+ * <p>The frame owns the shared services and switches between login,
+ * registration, and dashboard panels using {@link CardLayout}.</p>
+ */
 public class SkyCastApp extends JFrame {
     private final CardLayout cardLayout = new CardLayout();
     private final JPanel root = new JPanel(cardLayout);
@@ -12,6 +18,11 @@ public class SkyCastApp extends JFrame {
     private final RegistrationPanel registrationPanel;
     private final DashboardPanel dashboardPanel;
 
+    /**
+     * Creates the application window and all primary screens.
+     *
+     * @param database initialized local database access object
+     */
     public SkyCastApp(Database database) {
         super("SkyCast për desktop");
         this.authService = new AuthService(database);
@@ -32,20 +43,36 @@ public class SkyCastApp extends JFrame {
         showLogin();
     }
 
+    /**
+     * Exposes authentication operations to panels that need account updates.
+     *
+     * @return shared authentication service
+     */
     public AuthService authService() {
         return authService;
     }
 
+    /**
+     * Shows the login screen and makes Login the Enter-key default action.
+     */
     public void showLogin() {
         cardLayout.show(root, "login");
         getRootPane().setDefaultButton(loginPanel.defaultButton());
     }
 
+    /**
+     * Shows the registration screen and makes Register the Enter-key default action.
+     */
     public void showRegistration() {
         cardLayout.show(root, "registration");
         getRootPane().setDefaultButton(registrationPanel.defaultButton());
     }
 
+    /**
+     * Shows the dashboard for an authenticated user.
+     *
+     * @param user logged-in user
+     */
     public void showDashboard(User user) {
         dashboardPanel.setUser(user);
         cardLayout.show(root, "dashboard");

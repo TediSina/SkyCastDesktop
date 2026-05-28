@@ -8,12 +8,27 @@ import java.awt.Insets;
 import java.awt.RenderingHints;
 import javax.swing.JButton;
 
+/**
+ * Custom Swing button that paints either a gradient-filled or outlined action.
+ *
+ * <p>This keeps the UI visually richer without requiring an external Swing
+ * look-and-feel dependency.</p>
+ */
 public class GradientButton extends JButton {
     private final Color start;
     private final Color end;
     private final Color textColor;
     private final boolean outlined;
 
+    /**
+     * Creates a gradient or outlined button.
+     *
+     * @param text button text
+     * @param start first gradient color, or outlined fill color
+     * @param end second gradient color
+     * @param textColor foreground color while enabled
+     * @param outlined true to draw a light outlined button instead of a gradient
+     */
     public GradientButton(String text, Color start, Color end, Color textColor, boolean outlined) {
         super(text);
         this.start = start;
@@ -40,6 +55,7 @@ public class GradientButton extends JButton {
             int height = getHeight() - 1;
             int radius = 8;
 
+            // Rollover brightening is painted manually because contentAreaFilled is disabled.
             Color paintStart = getModel().isRollover() ? brighten(start, 1.06f) : start;
             Color paintEnd = getModel().isRollover() ? brighten(end, 1.06f) : end;
 
@@ -59,6 +75,9 @@ public class GradientButton extends JButton {
         super.paintComponent(graphics);
     }
 
+    /**
+     * Scales a color upward while clamping each channel to the valid RGB range.
+     */
     private Color brighten(Color color, float amount) {
         return new Color(
                 Math.min(255, Math.round(color.getRed() * amount)),

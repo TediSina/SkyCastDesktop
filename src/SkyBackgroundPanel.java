@@ -5,7 +5,16 @@ import java.awt.GradientPaint;
 import java.awt.RenderingHints;
 import javax.swing.JPanel;
 
+/**
+ * Full-screen background panel used by the main app screens.
+ *
+ * <p>It paints a soft sky gradient and subtle geometric texture so the app has
+ * a weather-themed visual identity while still using plain Swing.</p>
+ */
 public class SkyBackgroundPanel extends JPanel {
+    /**
+     * Creates a transparent panel that paints its own background.
+     */
     public SkyBackgroundPanel() {
         setOpaque(false);
     }
@@ -20,6 +29,7 @@ public class SkyBackgroundPanel extends JPanel {
             g2.setPaint(new GradientPaint(0, 0, new Color(222, 245, 248), width, height, new Color(250, 244, 231)));
             g2.fillRect(0, 0, width, height);
 
+            // Diagonal strokes and bands add motion without using image assets.
             g2.setColor(new Color(255, 255, 255, 84));
             for (int x = -height; x < width + height; x += 56) {
                 g2.drawLine(x, height, x + height, 0);

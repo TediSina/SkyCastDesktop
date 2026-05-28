@@ -12,9 +12,20 @@ import javax.swing.BorderFactory;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 
+/**
+ * Decorative left-side panel for login and registration screens.
+ *
+ * <p>The component is deliberately self-painted so the auth screens have a
+ * consistent branded illustration without requiring bundled image assets.</p>
+ */
 public class AuthShowcasePanel extends JPanel {
     private final String headline;
 
+    /**
+     * Creates a branded showcase panel with a multi-line headline.
+     *
+     * @param headline text split by {@code \n} into multiple display lines
+     */
     public AuthShowcasePanel(String headline) {
         this.headline = headline;
         setOpaque(false);
@@ -58,6 +69,7 @@ public class AuthShowcasePanel extends JPanel {
             g2.setPaint(new GradientPaint(0, 0, new Color(8, 79, 91), width, height, new Color(238, 139, 62)));
             g2.fillRoundRect(0, 0, width, height, radius, radius);
 
+            // The diagonal texture mirrors the main background and ties screens together.
             g2.setColor(new Color(255, 255, 255, 34));
             for (int x = -height; x < width + height; x += 42) {
                 g2.drawLine(x, height, x + height, 0);
@@ -71,6 +83,7 @@ public class AuthShowcasePanel extends JPanel {
     }
 
     private void paintWeatherScene(Graphics2D g2, int width, int height) {
+        // Simple vector weather scene: sun, cloud, rain, and atmospheric bands.
         g2.setColor(new Color(255, 197, 85, 230));
         g2.fillOval(width - 124, 86, 78, 78);
 

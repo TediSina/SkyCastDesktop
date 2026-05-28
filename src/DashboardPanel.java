@@ -20,6 +20,9 @@ import javax.swing.JTextField;
 import javax.swing.SwingWorker;
 import javax.swing.table.DefaultTableModel;
 
+/**
+ * Main authenticated screen for searching and displaying weather data.
+ */
 public class DashboardPanel extends SkyBackgroundPanel {
     private final SkyCastApp app;
     private final Database database;
@@ -61,6 +64,13 @@ public class DashboardPanel extends SkyBackgroundPanel {
         }
     };
 
+    /**
+     * Creates the dashboard and wires weather actions.
+     *
+     * @param app parent frame used for navigation and shared services
+     * @param database local database for weather history
+     * @param weatherService Open-Meteo service client
+     */
     public DashboardPanel(SkyCastApp app, Database database, WeatherService weatherService) {
         this.app = app;
         this.database = database;
@@ -88,6 +98,11 @@ public class DashboardPanel extends SkyBackgroundPanel {
         logoutButton.addActionListener(event -> app.showLogin());
     }
 
+    /**
+     * Binds the dashboard to the logged-in user and loads their saved city.
+     *
+     * @param user authenticated user
+     */
     public void setUser(User user) {
         this.user = user;
         this.currentWeather = null;
@@ -100,10 +115,18 @@ public class DashboardPanel extends SkyBackgroundPanel {
         }
     }
 
+    /**
+     * Returns the dashboard default Enter action.
+     *
+     * @return search button
+     */
     public JButton defaultButton() {
         return searchButton;
     }
 
+    /**
+     * Builds the top application header.
+     */
     private JPanel createHeader() {
         SurfacePanel header = new SurfacePanel(new Color(255, 255, 255, 220), new Color(196, 218, 224));
         header.setLayout(new BorderLayout(16, 8));
@@ -131,6 +154,9 @@ public class DashboardPanel extends SkyBackgroundPanel {
         return header;
     }
 
+    /**
+     * Builds the dashboard body: search, current weather, forecast, and history.
+     */
     private JPanel createContent() {
         JPanel content = new JPanel(new BorderLayout(18, 18));
         content.setOpaque(false);
@@ -157,6 +183,9 @@ public class DashboardPanel extends SkyBackgroundPanel {
         return content;
     }
 
+    /**
+     * Builds the city search and saved-city controls.
+     */
     private JPanel createSearchPanel() {
         SurfacePanel panel = new SurfacePanel(new Color(255, 255, 255, 232), new Color(194, 218, 226));
         panel.setLayout(new BorderLayout(14, 8));
@@ -179,6 +208,9 @@ public class DashboardPanel extends SkyBackgroundPanel {
         return panel;
     }
 
+    /**
+     * Builds the prominent current-weather card.
+     */
     private JPanel createCurrentWeatherPanel() {
         WeatherCardPanel panel = currentWeatherCard;
         panel.setLayout(new BorderLayout(12, 16));
@@ -226,6 +258,9 @@ public class DashboardPanel extends SkyBackgroundPanel {
         return panel;
     }
 
+    /**
+     * Builds the 7-day forecast table panel.
+     */
     private JPanel createForecastPanel() {
         SurfacePanel panel = new SurfacePanel();
         panel.setLayout(new BorderLayout(10, 12));
@@ -243,6 +278,9 @@ public class DashboardPanel extends SkyBackgroundPanel {
         return panel;
     }
 
+    /**
+     * Builds the recent-search history table panel.
+     */
     private JPanel createHistoryPanel() {
         SurfacePanel panel = new SurfacePanel(new Color(255, 255, 255, 236), new Color(197, 218, 226));
         panel.setLayout(new BorderLayout(10, 12));
@@ -261,6 +299,9 @@ public class DashboardPanel extends SkyBackgroundPanel {
         return panel;
     }
 
+    /**
+     * Adds one small metric card to the current-weather details grid.
+     */
     private void addMetric(JPanel panel, int x, int y, String label, JLabel value) {
         SurfacePanel metric = new SurfacePanel(new Color(255, 255, 255, 215), new Color(255, 255, 255, 80));
         metric.setLayout(new BorderLayout(2, 4));
@@ -279,6 +320,9 @@ public class DashboardPanel extends SkyBackgroundPanel {
         panel.add(metric, constraints);
     }
 
+    /**
+     * Creates a bold label for metric values.
+     */
     private static JLabel valueLabel(String text) {
         JLabel label = new JLabel(text);
         label.setFont(new Font("Segoe UI", Font.BOLD, 18));
@@ -286,6 +330,9 @@ public class DashboardPanel extends SkyBackgroundPanel {
         return label;
     }
 
+    /**
+     * Resolves the city, fetches weather data, and saves the lookup to history.
+     */
     private void searchCurrentCity() {
         User activeUser = user;
         String city = cityField.getText().trim();
@@ -298,6 +345,7 @@ public class DashboardPanel extends SkyBackgroundPanel {
         }
 
         setLoading(true, "Po ngarkohet moti për " + city + "...");
+        // Network calls run off the Swing event dispatch thread so the UI remains responsive.
         SwingWorker<WeatherData, Void> worker = new SwingWorker<>() {
             @Override
             protected WeatherData doInBackground() throws Exception {
@@ -330,6 +378,9 @@ public class DashboardPanel extends SkyBackgroundPanel {
         worker.execute();
     }
 
+    /**
+     * Copies a fetched weather response into the visible dashboard components.
+     */
     private void showWeather(WeatherData weather) {
         currentWeather = weather;
         saveCityButton.setEnabled(true);
@@ -357,6 +408,9 @@ public class DashboardPanel extends SkyBackgroundPanel {
         }
     }
 
+    /**
+     * Loads recent searches from SQLite into the history table.
+     */
     private void loadHistory() {
         if (user == null) {
             return;
@@ -379,6 +433,9 @@ public class DashboardPanel extends SkyBackgroundPanel {
         }
     }
 
+    /**
+     * Enables/disables controls while a weather request is running.
+     */
     private void setLoading(boolean loading, String text) {
         searchButton.setEnabled(!loading);
         loadSavedCityButton.setEnabled(!loading);
@@ -387,6 +444,9 @@ public class DashboardPanel extends SkyBackgroundPanel {
         statusLabel.setText(text);
     }
 
+    /**
+     * Saves the currently displayed city as the user's preferred city.
+     */
     private void saveCurrentCity() {
         if (user == null || currentWeather == null) {
             JOptionPane.showMessageDialog(this, "Kërko fillimisht një qytet.", "Nuk ka qytet të ngarkuar", JOptionPane.WARNING_MESSAGE);
@@ -406,6 +466,9 @@ public class DashboardPanel extends SkyBackgroundPanel {
         }
     }
 
+    /**
+     * Formats weather numeric values with one decimal place.
+     */
     private String format(double value) {
         return String.format(Locale.US, "%.1f", value);
     }

@@ -11,6 +11,9 @@ import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
 
+/**
+ * Registration form for creating a new local SkyCast account.
+ */
 public class RegistrationPanel extends SkyBackgroundPanel {
     private final SkyCastApp app;
     private final AuthService authService;
@@ -22,6 +25,12 @@ public class RegistrationPanel extends SkyBackgroundPanel {
     private final JButton createButton = AppTheme.primaryButton("Regjistrohu");
     private final JButton loginButton = AppTheme.secondaryButton("Kthehu te hyrja");
 
+    /**
+     * Creates the registration form and wires Enter-key registration behavior.
+     *
+     * @param app parent frame used for navigation
+     * @param authService authentication service
+     */
     public RegistrationPanel(SkyCastApp app, AuthService authService) {
         this.app = app;
         this.authService = authService;
@@ -38,10 +47,18 @@ public class RegistrationPanel extends SkyBackgroundPanel {
         cityField.addActionListener(event -> register());
     }
 
+    /**
+     * Returns the button used as this screen's default Enter action.
+     *
+     * @return register button
+     */
     public JButton defaultButton() {
         return createButton;
     }
 
+    /**
+     * Builds the two-column registration layout.
+     */
     private JPanel createShell() {
         JPanel shell = new JPanel(new BorderLayout(0, 0));
         shell.setOpaque(false);
@@ -51,6 +68,9 @@ public class RegistrationPanel extends SkyBackgroundPanel {
         return shell;
     }
 
+    /**
+     * Builds the registration form card.
+     */
     private JPanel createCard() {
         SurfacePanel card = new SurfacePanel();
         card.setLayout(new BorderLayout(0, 22));
@@ -92,6 +112,9 @@ public class RegistrationPanel extends SkyBackgroundPanel {
         return card;
     }
 
+    /**
+     * Adds a labeled field to the two-column form grid.
+     */
     private void addField(JPanel parent, int x, int y, String label, JTextField field) {
         JPanel group = new JPanel(new BorderLayout(0, 6));
         group.setOpaque(false);
@@ -110,6 +133,9 @@ public class RegistrationPanel extends SkyBackgroundPanel {
         parent.add(group, constraints);
     }
 
+    /**
+     * Validates the form, creates the user, and opens the dashboard on success.
+     */
     private void register() {
         char[] password = passwordField.getPassword();
         char[] confirm = confirmPasswordField.getPassword();
@@ -137,6 +163,9 @@ public class RegistrationPanel extends SkyBackgroundPanel {
         }
     }
 
+    /**
+     * Clears temporary password confirmation data from memory.
+     */
     private void clear(char[] value) {
         for (int i = 0; i < value.length; i++) {
             value[i] = '\0';

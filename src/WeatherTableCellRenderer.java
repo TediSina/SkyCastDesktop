@@ -4,7 +4,13 @@ import javax.swing.BorderFactory;
 import javax.swing.JTable;
 import javax.swing.table.DefaultTableCellRenderer;
 
+/**
+ * Shared renderer for forecast and history tables.
+ */
 public class WeatherTableCellRenderer extends DefaultTableCellRenderer {
+    /**
+     * Applies zebra striping and app-specific padding to a table cell.
+     */
     @Override
     public Component getTableCellRendererComponent(
             JTable table,

@@ -10,11 +10,20 @@ import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * SQLite persistence layer for users and weather-search history.
+ */
 public class Database {
     private static final Path DATA_DIRECTORY = Path.of("data");
     private static final Path DATABASE_PATH = DATA_DIRECTORY.resolve("skycast.db");
     private static final String URL = "jdbc:sqlite:" + DATABASE_PATH;
 
+    /**
+     * Creates the data directory and all required database tables/indexes.
+     *
+     * @throws IOException when the local data directory cannot be created
+     * @throws SQLException when schema creation fails
+     */
     public void initialize() throws IOException, SQLException {
         loadDriver();
         Files.createDirectories(DATA_DIRECTORY);
@@ -60,14 +69,28 @@ public class Database {
         }
     }
 
+    /**
+     * Opens a SQLite connection with foreign-key enforcement enabled.
+     *
+     * @return active database connection; caller must close it
+     * @throws SQLException when the connection cannot be opened
+     */
     public Connection getConnection() throws SQLException {
         Connection connection = DriverManager.getConnection(URL);
         try (Statement statement = connection.createStatement()) {
+            // SQLite keeps foreign keys disabled by default per connection.
             statement.execute("PRAGMA foreign_keys = ON");
         }
         return connection;
     }
 
+    /**
+     * Stores a single weather lookup in the current user's history.
+     *
+     * @param user user who performed the search
+     * @param weather weather response to persist
+     * @throws SQLException when the insert fails
+     */
     public void saveWeatherSearch(User user, WeatherData weather) throws SQLException {
         String sql = """
                 INSERT INTO weather_searches (
@@ -96,6 +119,14 @@ public class Database {
         }
     }
 
+    /**
+     * Loads the latest weather searches for a user.
+     *
+     * @param user owner of the history rows
+     * @param limit maximum number of rows to return
+     * @return newest search-history items first
+     * @throws SQLException when the query fails
+     */
     public List<SearchHistoryItem> recentSearches(User user, int limit) throws SQLException {
         String sql = """
                 SELECT city, country, temperature, weather_code, searched_at
@@ -126,6 +157,9 @@ public class Database {
         return items;
     }
 
+    /**
+     * Verifies that the SQLite JDBC driver is present before opening connections.
+     */
     private void loadDriver() {
         try {
             Class.forName("org.sqlite.JDBC");

@@ -1,7 +1,16 @@
+/**
+ * Utility for converting Open-Meteo weather codes into Albanian labels and icons.
+ */
 public final class WeatherCodes {
     private WeatherCodes() {
     }
 
+    /**
+     * Returns a localized text description for an Open-Meteo weather code.
+     *
+     * @param code Open-Meteo weather code
+     * @return localized condition description
+     */
     public static String describe(int code) {
         return switch (code) {
             case 0 -> "Qiell i kthjellët";
@@ -23,6 +32,12 @@ public final class WeatherCodes {
         };
     }
 
+    /**
+     * Returns an emoji icon for an Open-Meteo weather code.
+     *
+     * @param code Open-Meteo weather code
+     * @return emoji string
+     */
     public static String icon(int code) {
         return switch (code) {
             case 0 -> "\u2600\uFE0F";
@@ -38,6 +53,12 @@ public final class WeatherCodes {
         };
     }
 
+    /**
+     * Combines the emoji icon and localized description for table display.
+     *
+     * @param code Open-Meteo weather code
+     * @return icon plus description
+     */
     public static String describeWithIcon(int code) {
         return icon(code) + " " + describe(code);
     }

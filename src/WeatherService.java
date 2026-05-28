@@ -11,6 +11,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
+/**
+ * Client for Open-Meteo geocoding and forecast APIs.
+ */
 public class WeatherService {
     private static final String GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search";
     private static final String FORECAST_URL = "https://api.open-meteo.com/v1/forecast";
@@ -19,6 +22,14 @@ public class WeatherService {
             .connectTimeout(Duration.ofSeconds(10))
             .build();
 
+    /**
+     * Finds the best matching location for a city name.
+     *
+     * @param city city typed by the user
+     * @return first location result returned by Open-Meteo
+     * @throws IOException when the API response is invalid or no city is found
+     * @throws InterruptedException when the HTTP request is interrupted
+     */
     public LocationResult searchLocation(String city) throws IOException, InterruptedException {
         String query = GEOCODING_URL
                 + "?name=" + encode(city)
@@ -40,6 +51,14 @@ public class WeatherService {
         );
     }
 
+    /**
+     * Fetches current and daily weather for a resolved location.
+     *
+     * @param location resolved Open-Meteo location
+     * @return current weather plus up to seven daily forecast rows
+     * @throws IOException when the API response cannot be loaded or parsed
+     * @throws InterruptedException when the HTTP request is interrupted
+     */
     public WeatherData fetchWeather(LocationResult location) throws IOException, InterruptedException {
         String query = String.format(Locale.US,
                 "%s?latitude=%.6f&longitude=%.6f"
@@ -71,6 +90,9 @@ public class WeatherService {
         );
     }
 
+    /**
+     * Converts Open-Meteo daily arrays into row-oriented forecast objects.
+     */
     private List<DailyForecast> readDailyForecasts(Map<String, Object> daily) {
         List<Object> dates = list(daily.get("time"));
         List<Object> codes = list(daily.get("weather_code"));
@@ -94,6 +116,9 @@ public class WeatherService {
         return forecasts;
     }
 
+    /**
+     * Executes a GET request and parses the JSON response body.
+     */
     private Map<String, Object> requestJson(String url) throws IOException, InterruptedException {
         HttpRequest request = HttpRequest.newBuilder(URI.create(url))
                 .timeout(Duration.ofSeconds(20))
@@ -113,11 +138,17 @@ public class WeatherService {
         return json;
     }
 
+    /**
+     * URL-encodes user-provided city names.
+     */
     private String encode(String value) {
         return URLEncoder.encode(value.trim(), StandardCharsets.UTF_8);
     }
 
     @SuppressWarnings("unchecked")
+    /**
+     * Casts a parsed JSON value to an object map with a helpful failure path.
+     */
     private Map<String, Object> object(Object value) {
         if (value instanceof Map<?, ?> map) {
             return (Map<String, Object>) map;
@@ -126,6 +157,9 @@ public class WeatherService {
     }
 
     @SuppressWarnings("unchecked")
+    /**
+     * Casts a parsed JSON value to a list, returning an empty list for missing arrays.
+     */
     private List<Object> list(Object value) {
         if (value instanceof List<?> list) {
             return (List<Object>) list;
@@ -133,10 +167,16 @@ public class WeatherService {
         return List.of();
     }
 
+    /**
+     * Converts optional JSON values to display-safe text.
+     */
     private String text(Object value) {
         return value == null ? "" : value.toString();
     }
 
+    /**
+     * Converts Open-Meteo numeric values that may arrive as numbers or strings.
+     */
     private double number(Object value) {
         if (value instanceof Number number) {
             return number.doubleValue();
@@ -144,6 +184,9 @@ public class WeatherService {
         return Double.parseDouble(text(value));
     }
 
+    /**
+     * Converts a numeric JSON value to an integer weather/humidity code.
+     */
     private int integer(Object value) {
         return (int) Math.round(number(value));
     }

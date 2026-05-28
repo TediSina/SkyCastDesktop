@@ -5,13 +5,24 @@ import java.awt.GradientPaint;
 import java.awt.RenderingHints;
 import javax.swing.JPanel;
 
+/**
+ * Main current-weather card with a gradient that changes by weather code.
+ */
 public class WeatherCardPanel extends JPanel {
     private int weatherCode = 0;
 
+    /**
+     * Creates an initially clear-weather card.
+     */
     public WeatherCardPanel() {
         setOpaque(false);
     }
 
+    /**
+     * Updates the weather condition used to select the card gradient.
+     *
+     * @param weatherCode Open-Meteo weather code
+     */
     public void setWeatherCode(int weatherCode) {
         this.weatherCode = weatherCode;
         repaint();
@@ -25,6 +36,7 @@ public class WeatherCardPanel extends JPanel {
             int height = getHeight() - 4;
             Color[] colors = colorsFor(weatherCode);
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            // Paint shadow and gradient manually to make the card feel less like a default JPanel.
             g2.setColor(new Color(14, 50, 63, 34));
             g2.fillRoundRect(3, 4, width - 4, height - 1, 8, 8);
             g2.setPaint(new GradientPaint(0, 0, colors[0], width, height, colors[1]));
@@ -44,6 +56,7 @@ public class WeatherCardPanel extends JPanel {
     }
 
     private Color[] colorsFor(int code) {
+        // Group Open-Meteo codes into visual weather families.
         return switch (code) {
             case 0, 1 -> new Color[]{new Color(17, 141, 166), new Color(243, 154, 73)};
             case 2, 3, 45, 48 -> new Color[]{new Color(56, 103, 129), new Color(92, 158, 168)};

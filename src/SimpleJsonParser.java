@@ -3,6 +3,13 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Minimal JSON parser used for Open-Meteo responses.
+ *
+ * <p>The project intentionally avoids an additional JSON dependency, so this
+ * parser supports the JSON constructs needed by the API: objects, arrays,
+ * strings, numbers, booleans, and null.</p>
+ */
 public class SimpleJsonParser {
     private final String json;
     private int index;
@@ -11,6 +18,13 @@ public class SimpleJsonParser {
         this.json = json;
     }
 
+    /**
+     * Parses a JSON string whose root value must be an object.
+     *
+     * @param json JSON text
+     * @return root object as a map
+     * @throws IllegalArgumentException when the JSON is invalid or not an object
+     */
     @SuppressWarnings("unchecked")
     public static Map<String, Object> parseObject(String json) {
         Object value = new SimpleJsonParser(json).parse();
@@ -20,6 +34,9 @@ public class SimpleJsonParser {
         throw new IllegalArgumentException("Rrënja e JSON-it nuk është objekt.");
     }
 
+    /**
+     * Parses the full input and verifies that no trailing tokens remain.
+     */
     private Object parse() {
         skipWhitespace();
         Object value = readValue();
@@ -30,6 +47,9 @@ public class SimpleJsonParser {
         return value;
     }
 
+    /**
+     * Dispatches to the correct JSON reader based on the next token.
+     */
     private Object readValue() {
         skipWhitespace();
         if (index >= json.length()) {
@@ -53,6 +73,9 @@ public class SimpleJsonParser {
         };
     }
 
+    /**
+     * Reads a JSON object into insertion-order map form.
+     */
     private Map<String, Object> readObject() {
         expect('{');
         Map<String, Object> object = new LinkedHashMap<>();
@@ -78,6 +101,9 @@ public class SimpleJsonParser {
         }
     }
 
+    /**
+     * Reads a JSON array into a Java list.
+     */
     private List<Object> readArray() {
         expect('[');
         List<Object> values = new ArrayList<>();
@@ -98,6 +124,9 @@ public class SimpleJsonParser {
         }
     }
 
+    /**
+     * Reads a JSON string, including standard escape sequences.
+     */
     private String readString() {
         expect('"');
         StringBuilder builder = new StringBuilder();
@@ -130,6 +159,9 @@ public class SimpleJsonParser {
         throw error("Tekst JSON i pambyllur");
     }
 
+    /**
+     * Reads a four-hex-character unicode escape.
+     */
     private char readUnicode() {
         if (index + 4 > json.length()) {
             throw error("Sekuencë unicode e pavlefshme");
@@ -139,6 +171,9 @@ public class SimpleJsonParser {
         return (char) Integer.parseInt(hex, 16);
     }
 
+    /**
+     * Reads a JSON number and returns it as a {@link Double}.
+     */
     private Object readNumber() {
         int start = index;
         if (peek('-')) {
@@ -159,6 +194,9 @@ public class SimpleJsonParser {
         return Double.parseDouble(json.substring(start, index));
     }
 
+    /**
+     * Advances over a required run of digits.
+     */
     private void readDigits() {
         int start = index;
         while (index < json.length() && Character.isDigit(json.charAt(index))) {
@@ -169,6 +207,9 @@ public class SimpleJsonParser {
         }
     }
 
+    /**
+     * Reads a fixed JSON literal such as {@code true}, {@code false}, or {@code null}.
+     */
     private Object readLiteral(String literal, Object value) {
         if (!json.startsWith(literal, index)) {
             throw error("Vlerë JSON e pavlefshme");
@@ -177,12 +218,18 @@ public class SimpleJsonParser {
         return value;
     }
 
+    /**
+     * Skips JSON whitespace.
+     */
     private void skipWhitespace() {
         while (index < json.length() && Character.isWhitespace(json.charAt(index))) {
             index++;
         }
     }
 
+    /**
+     * Consumes an expected character or throws a location-aware parser error.
+     */
     private void expect(char expected) {
         if (index >= json.length() || json.charAt(index) != expected) {
             throw error("Pritej '" + expected + "'");
@@ -190,10 +237,16 @@ public class SimpleJsonParser {
         index++;
     }
 
+    /**
+     * Checks the next character without advancing.
+     */
     private boolean peek(char expected) {
         return index < json.length() && json.charAt(index) == expected;
     }
 
+    /**
+     * Builds parser exceptions with the current character offset.
+     */
     private IllegalArgumentException error(String message) {
         return new IllegalArgumentException(message + " në karakterin " + index + ".");
     }
