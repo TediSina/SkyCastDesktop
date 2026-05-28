@@ -1,6 +1,6 @@
-# SkyCast për desktop
+# SkyCast Desktop
 
-SkyCast është një aplikacion moti në Java Swing me forma për regjistrim,
+SkyCast Desktop është një aplikacion moti në Java Swing me forma për regjistrim,
 hyrje dhe panel kryesor. Aplikacioni ruan përdoruesit dhe kërkimet e fundit
 të motit në bazën lokale SQLite `data/skycast.db`, ndërsa të dhënat e motit i
 merr drejtpërdrejt nga Open-Meteo.
