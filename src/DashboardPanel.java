@@ -304,9 +304,11 @@ public class DashboardPanel extends SkyBackgroundPanel {
      */
     private void addMetric(JPanel panel, int x, int y, String label, JLabel value) {
         SurfacePanel metric = new SurfacePanel(new Color(255, 255, 255, 215), new Color(255, 255, 255, 80));
-        metric.setLayout(new BorderLayout(2, 4));
-        metric.setBorder(BorderFactory.createEmptyBorder(12, 14, 12, 14));
+        metric.setLayout(new BorderLayout(2, 1));
+        metric.setBorder(BorderFactory.createEmptyBorder(6, 12, 6, 12));
+        metric.setMinimumSize(new Dimension(0, 0));
         JLabel metricLabel = AppTheme.muted(label);
+        metricLabel.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         metricLabel.setForeground(new Color(66, 86, 96));
         metric.add(metricLabel, BorderLayout.NORTH);
         metric.add(value, BorderLayout.CENTER);
@@ -315,8 +317,9 @@ public class DashboardPanel extends SkyBackgroundPanel {
         constraints.gridx = x;
         constraints.gridy = y;
         constraints.weightx = 1;
-        constraints.fill = GridBagConstraints.HORIZONTAL;
-        constraints.insets = new Insets(6, 6, 6, 6);
+        constraints.weighty = 1;
+        constraints.fill = GridBagConstraints.BOTH;
+        constraints.insets = new Insets(3, 3, 3, 3);
         panel.add(metric, constraints);
     }
 
@@ -325,7 +328,7 @@ public class DashboardPanel extends SkyBackgroundPanel {
      */
     private static JLabel valueLabel(String text) {
         JLabel label = new JLabel(text);
-        label.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        label.setFont(new Font("Segoe UI", Font.BOLD, 16));
         label.setForeground(AppTheme.TEXT);
         return label;
     }

@@ -24,7 +24,7 @@ public class SkyCastApp extends JFrame {
      * @param database initialized local database access object
      */
     public SkyCastApp(Database database) {
-        super("SkyCast për desktop");
+        super("SkyCast Desktop");
         this.authService = new AuthService(database);
         this.weatherService = new WeatherService();
         this.loginPanel = new LoginPanel(this, authService);
@@ -36,8 +36,8 @@ public class SkyCastApp extends JFrame {
         root.add(dashboardPanel, "dashboard");
 
         setContentPane(root);
-        setMinimumSize(new Dimension(1180, 1000));
-        setSize(new Dimension(1320, 1000));
+        setMinimumSize(new Dimension(1320, 920));
+        setSize(new Dimension(1320, 920));
         setLocationRelativeTo(null);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         showLogin();
