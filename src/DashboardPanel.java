@@ -81,6 +81,7 @@ public class DashboardPanel extends SkyBackgroundPanel {
     private final JPanel sectionsPanel = new JPanel(new GridBagLayout());
     private JPanel currentWeatherPanel;
     private JPanel forecastPanel;
+    private JPanel hourlyForecastPanel;
     private JPanel historyPanel;
     private final HourlyWeatherChartPanel hourlyChartPanel = new HourlyWeatherChartPanel();
     private final DailyWeatherChartPanel dailyChartPanel = new DailyWeatherChartPanel();
@@ -91,6 +92,14 @@ public class DashboardPanel extends SkyBackgroundPanel {
     private final JLabel windLabel = valueLabel("--");
     private final JLabel rainLabel = valueLabel("--");
     private final JLabel observedLabel = AppTheme.muted("--");
+    private final DefaultTableModel hourlyModel = new DefaultTableModel(
+            new String[]{"Ora", "Gjendja", "Temp.", "Ndihet", "Reshjet", "Era"}, 0
+    ) {
+        @Override
+        public boolean isCellEditable(int row, int column) {
+            return false;
+        }
+    };
     private final DefaultTableModel forecastModel = new DefaultTableModel(
             new String[]{"Data", "Gjendja", "Maks.", "Min.", "Reshjet", "Era"}, 0
     ) {
@@ -159,6 +168,8 @@ public class DashboardPanel extends SkyBackgroundPanel {
         this.user = user;
         this.currentWeather = null;
         saveCityButton.setEnabled(false);
+        hourlyModel.setRowCount(0);
+        forecastModel.setRowCount(0);
         hourlyChartPanel.setForecasts(List.of());
         dailyChartPanel.setForecasts(List.of());
         welcomeLabel.setText("Mirë se erdhe, " + user.username());
@@ -326,6 +337,7 @@ public class DashboardPanel extends SkyBackgroundPanel {
         sectionsPanel.setOpaque(false);
         currentWeatherPanel = createCurrentWeatherPanel();
         forecastPanel = createForecastPanel();
+        hourlyForecastPanel = createHourlyForecastPanel();
         historyPanel = createHistoryPanel();
         layoutDashboardSections(false);
         dashboardBody.add(sectionsPanel, BorderLayout.CENTER);
@@ -369,18 +381,20 @@ public class DashboardPanel extends SkyBackgroundPanel {
         sectionsPanel.removeAll();
         if (compact) {
             addDashboardSection(currentWeatherPanel, 0, 0, 1, 1.0, new Insets(0, 0, 14, 0));
-            addDashboardSection(forecastPanel, 0, 1, 1, 1.0, new Insets(0, 0, 14, 0));
+            addDashboardSection(historyPanel, 0, 1, 1, 1.0, new Insets(0, 0, 14, 0));
             addDashboardSection(hourlyChartPanel, 0, 2, 1, 1.0, new Insets(0, 0, 14, 0));
-            addDashboardSection(dailyChartPanel, 0, 3, 1, 1.0, new Insets(0, 0, 14, 0));
-            addDashboardSection(historyPanel, 0, 4, 1, 1.0, new Insets(0, 0, 0, 0));
+            addDashboardSection(hourlyForecastPanel, 0, 3, 1, 1.0, new Insets(0, 0, 14, 0));
+            addDashboardSection(dailyChartPanel, 0, 4, 1, 1.0, new Insets(0, 0, 14, 0));
+            addDashboardSection(forecastPanel, 0, 5, 1, 1.0, new Insets(0, 0, 0, 0));
             return;
         }
 
         addDashboardSection(currentWeatherPanel, 0, 0, 1, 0.44, new Insets(0, 0, 18, 18));
-        addDashboardSection(forecastPanel, 1, 0, 1, 0.56, new Insets(0, 0, 18, 0));
+        addDashboardSection(historyPanel, 1, 0, 1, 0.56, new Insets(0, 0, 18, 0));
         addDashboardSection(hourlyChartPanel, 0, 1, 1, 0.5, new Insets(0, 0, 18, 18));
-        addDashboardSection(dailyChartPanel, 1, 1, 1, 0.5, new Insets(0, 0, 18, 0));
-        addDashboardSection(historyPanel, 0, 2, 2, 1.0, new Insets(0, 0, 0, 0));
+        addDashboardSection(hourlyForecastPanel, 1, 1, 1, 0.5, new Insets(0, 0, 18, 0));
+        addDashboardSection(dailyChartPanel, 0, 2, 1, 0.5, new Insets(0, 0, 0, 18));
+        addDashboardSection(forecastPanel, 1, 2, 1, 0.5, new Insets(0, 0, 0, 0));
     }
 
     /**
@@ -513,6 +527,28 @@ public class DashboardPanel extends SkyBackgroundPanel {
 
         panel.add(top, BorderLayout.NORTH);
         panel.add(details, BorderLayout.CENTER);
+        return panel;
+    }
+
+    /**
+     * Builds the 12-hour forecast table panel.
+     */
+    private JPanel createHourlyForecastPanel() {
+        SurfacePanel panel = new SurfacePanel();
+        panel.setLayout(new BorderLayout(10, 12));
+        panel.setBorder(AppTheme.cardBorder());
+        panel.setPreferredSize(new Dimension(480, 285));
+        panel.setMinimumSize(new Dimension(280, 245));
+
+        JTable table = new JTable(hourlyModel);
+        AppTheme.styleTable(table);
+        table.setRowSelectionAllowed(false);
+        JScrollPane scrollPane = new JScrollPane(table);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+        scrollPane.getViewport().setBackground(Color.WHITE);
+
+        panel.add(AppTheme.section("Parashikimi 12-orësh"), BorderLayout.NORTH);
+        panel.add(scrollPane, BorderLayout.CENTER);
         return panel;
     }
 
@@ -874,6 +910,18 @@ public class DashboardPanel extends SkyBackgroundPanel {
         hourlyChartPanel.setForecasts(weather.hourlyForecasts());
         dailyChartPanel.setForecasts(weather.dailyForecasts());
 
+        hourlyModel.setRowCount(0);
+        for (HourlyForecast hour : weather.hourlyForecasts()) {
+            hourlyModel.addRow(new Object[]{
+                    compactTime(hour.time()),
+                    WeatherCodes.describeWithIcon(hour.weatherCode()),
+                    format(hour.temperature()) + " °C",
+                    format(hour.apparentTemperature()) + " °C",
+                    format(hour.precipitation()) + " mm",
+                    format(hour.windSpeed()) + " km/h"
+            });
+        }
+
         forecastModel.setRowCount(0);
         for (DailyForecast day : weather.dailyForecasts()) {
             forecastModel.addRow(new Object[]{
@@ -1050,6 +1098,17 @@ public class DashboardPanel extends SkyBackgroundPanel {
      */
     private String format(double value) {
         return String.format(Locale.US, "%.1f", value);
+    }
+
+    /**
+     * Keeps hourly table times compact and readable.
+     */
+    private String compactTime(String time) {
+        int separator = time == null ? -1 : time.indexOf('T');
+        if (separator >= 0 && time.length() >= separator + 3) {
+            return time.substring(separator + 1, separator + 3) + ":00";
+        }
+        return time == null ? "" : time;
     }
 
     /**

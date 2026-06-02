@@ -6,6 +6,7 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Insets;
 import java.awt.RenderingHints;
+import java.awt.event.MouseEvent;
 import java.awt.geom.Path2D;
 import java.util.List;
 import java.util.Locale;
@@ -16,6 +17,7 @@ import java.util.Locale;
 public class HourlyWeatherChartPanel extends SurfacePanel {
     private static final Color GRID = new Color(212, 226, 231);
     private static final Color TEMP = AppTheme.ACCENT;
+    private static final Color WIND = AppTheme.MINT;
     private static final Color RAIN = new Color(53, 142, 186);
     private static final Color DOT = Color.WHITE;
 
@@ -28,6 +30,7 @@ public class HourlyWeatherChartPanel extends SurfacePanel {
         setBorder(AppTheme.cardBorder());
         setPreferredSize(new Dimension(420, 285));
         setMinimumSize(new Dimension(260, 235));
+        setToolTipText("");
     }
 
     /**
@@ -70,14 +73,55 @@ public class HourlyWeatherChartPanel extends SurfacePanel {
             minTemp -= padding;
             maxTemp += padding;
 
-            drawLegend(g2, left, right, top, maxWind);
+            drawLegend(g2, left, right, top);
             drawGrid(g2, chartLeft, chartRight, chartTop, chartBottom, minTemp, maxTemp);
             drawRainBars(g2, chartLeft, chartRight, chartBottom, maxRain);
+            drawWindLine(g2, chartLeft, chartRight, chartTop, chartBottom, maxWind);
             drawTemperatureLine(g2, chartLeft, chartRight, chartTop, chartBottom, minTemp, maxTemp);
             drawTimeLabels(g2, chartLeft, chartRight, chartBottom);
         } finally {
             g2.dispose();
         }
+    }
+
+    @Override
+    public String getToolTipText(MouseEvent event) {
+        if (forecasts.isEmpty()) {
+            return null;
+        }
+
+        Insets insets = getInsets();
+        int left = insets.left + 44;
+        int right = Math.max(left + 1, getWidth() - insets.right - 14);
+        int top = insets.top + 76;
+        int bottom = Math.max(top + 1, getHeight() - insets.bottom - 48);
+
+        double minTemp = forecasts.stream().mapToDouble(HourlyForecast::temperature).min().orElse(0);
+        double maxTemp = forecasts.stream().mapToDouble(HourlyForecast::temperature).max().orElse(1);
+        double padding = Math.max(1.0, (maxTemp - minTemp) * 0.18);
+        minTemp -= padding;
+        maxTemp += padding;
+        double maxRain = Math.max(1.0, forecasts.stream().mapToDouble(HourlyForecast::precipitation).max().orElse(0));
+        double maxWind = Math.max(1.0, forecasts.stream().mapToDouble(HourlyForecast::windSpeed).max().orElse(0));
+
+        TooltipCandidate best = null;
+        int count = forecasts.size();
+        for (int i = 0; i < count; i++) {
+            HourlyForecast forecast = forecasts.get(i);
+            int x = xAt(i, count, left, right);
+            int tempY = yAt(forecast.temperature(), minTemp, maxTemp, top, bottom);
+            best = closer(best, pointTooltip(event, x, tempY, 11,
+                    tooltip(hourLabel(forecast.time()), "Temp.", format(forecast.temperature()) + " °C")));
+
+            int windY = windYAt(forecast.windSpeed(), maxWind, top, bottom);
+            best = closer(best, pointTooltip(event, x, windY, 11,
+                    tooltip(hourLabel(forecast.time()), "Erë", format(forecast.windSpeed()) + " km/h")));
+
+            TooltipCandidate rain = rainTooltip(event, forecast, x, count, left, right, bottom, maxRain);
+            best = closer(best, rain);
+        }
+
+        return best == null ? null : best.text();
     }
 
     private void drawTitle(Graphics2D g2, int x, int y, String title, String subtitle) {
@@ -89,25 +133,31 @@ public class HourlyWeatherChartPanel extends SurfacePanel {
         g2.drawString(subtitle, x, y + 25);
     }
 
-    private void drawLegend(Graphics2D g2, int left, int right, int top, double maxWind) {
+    private void drawLegend(Graphics2D g2, int left, int right, int top) {
         g2.setFont(AppTheme.BODY);
         FontMetrics metrics = g2.getFontMetrics();
         String temperatureLabel = "Temp.";
-        String windLabel = "Erë max " + format(maxWind) + " km/h";
+        String windLabel = "Erë";
+        String rainLabel = "Reshje";
         int markerGap = 8;
         int itemGap = 20;
         int legendWidth = 18 + markerGap + metrics.stringWidth(temperatureLabel)
-                + itemGap + 13 + markerGap + metrics.stringWidth(windLabel);
+                + itemGap + 18 + markerGap + metrics.stringWidth(windLabel)
+                + itemGap + 13 + markerGap + metrics.stringWidth(rainLabel);
         int x = Math.max(left, right - legendWidth);
 
         if (legendWidth > right - left) {
             drawTemperatureLegendItem(g2, left, top + 42, temperatureLabel);
             drawWindLegendItem(g2, left, top + 60, windLabel);
+            drawRainLegendItem(g2, left, top + 78, rainLabel);
             return;
         }
 
         drawTemperatureLegendItem(g2, x, top + 4, temperatureLabel);
-        drawWindLegendItem(g2, x + 18 + markerGap + metrics.stringWidth(temperatureLabel) + itemGap, top + 2, windLabel);
+        int windX = x + 18 + markerGap + metrics.stringWidth(temperatureLabel) + itemGap;
+        drawWindLegendItem(g2, windX, top + 4, windLabel);
+        int rainX = windX + 18 + markerGap + metrics.stringWidth(windLabel) + itemGap;
+        drawRainLegendItem(g2, rainX, top + 2, rainLabel);
     }
 
     private void drawTemperatureLegendItem(Graphics2D g2, int x, int y, String label) {
@@ -118,6 +168,13 @@ public class HourlyWeatherChartPanel extends SurfacePanel {
     }
 
     private void drawWindLegendItem(Graphics2D g2, int x, int y, String label) {
+        g2.setColor(WIND);
+        g2.fillRoundRect(x, y, 18, 5, 5, 5);
+        g2.setColor(AppTheme.MUTED);
+        g2.drawString(label, x + 26, y + 6);
+    }
+
+    private void drawRainLegendItem(Graphics2D g2, int x, int y, String label) {
         g2.setColor(RAIN);
         g2.fillRoundRect(x, y, 13, 9, 5, 5);
         g2.setColor(AppTheme.MUTED);
@@ -152,6 +209,34 @@ public class HourlyWeatherChartPanel extends SurfacePanel {
                 height = 3;
             }
             g2.fillRoundRect(x, bottom - height, width, height, 5, 5);
+        }
+    }
+
+    private void drawWindLine(Graphics2D g2, int left, int right, int top, int bottom, double maxWind) {
+        int count = forecasts.size();
+        double scale = Math.max(1.0, maxWind);
+        Path2D path = new Path2D.Double();
+        for (int i = 0; i < count; i++) {
+            int x = xAt(i, count, left, right);
+            int y = windYAt(forecasts.get(i).windSpeed(), scale, top, bottom);
+            if (i == 0) {
+                path.moveTo(x, y);
+            } else {
+                path.lineTo(x, y);
+            }
+        }
+
+        g2.setStroke(new BasicStroke(2.4f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        g2.setColor(new Color(WIND.getRed(), WIND.getGreen(), WIND.getBlue(), 210));
+        g2.draw(path);
+
+        for (int i = 0; i < count; i++) {
+            int x = xAt(i, count, left, right);
+            int y = windYAt(forecasts.get(i).windSpeed(), scale, top, bottom);
+            g2.setColor(DOT);
+            g2.fillOval(x - 3, y - 3, 6, 6);
+            g2.setColor(WIND);
+            g2.drawOval(x - 3, y - 3, 6, 6);
         }
     }
 
@@ -220,6 +305,70 @@ public class HourlyWeatherChartPanel extends SurfacePanel {
         }
         double ratio = (value - min) / (max - min);
         return bottom - (int) Math.round((bottom - top) * ratio);
+    }
+
+    private int windYAt(double value, double max, int top, int bottom) {
+        double ratio = Math.max(0, Math.min(1, value / max));
+        return bottom - (int) Math.round((bottom - top) * ratio);
+    }
+
+    private TooltipCandidate pointTooltip(MouseEvent event, int x, int y, int radius, String text) {
+        int dx = event.getX() - x;
+        int dy = event.getY() - y;
+        int distance = (dx * dx) + (dy * dy);
+        return distance <= radius * radius ? new TooltipCandidate(distance, text) : null;
+    }
+
+    private TooltipCandidate rainTooltip(
+            MouseEvent event,
+            HourlyForecast forecast,
+            int x,
+            int count,
+            int left,
+            int right,
+            int bottom,
+            double maxRain
+    ) {
+        if (forecast.precipitation() <= 0) {
+            return null;
+        }
+
+        int width = Math.max(4, (right - left) / Math.max(18, count * 2));
+        int height = (int) Math.round((forecast.precipitation() / maxRain) * 54);
+        if (height < 3) {
+            height = 3;
+        }
+
+        int barLeft = x - width / 2;
+        int barRight = barLeft + width;
+        int barTop = bottom - height;
+        if (event.getX() >= barLeft - 2 && event.getX() <= barRight + 2
+                && event.getY() >= barTop - 2 && event.getY() <= bottom + 2) {
+            int centerY = barTop + height / 2;
+            int dx = event.getX() - x;
+            int dy = event.getY() - centerY;
+            int distance = (dx * dx) + (dy * dy);
+            return new TooltipCandidate(distance,
+                    tooltip(hourLabel(forecast.time()), "Reshje", format(forecast.precipitation()) + " mm"));
+        }
+        return null;
+    }
+
+    private TooltipCandidate closer(TooltipCandidate current, TooltipCandidate candidate) {
+        if (candidate == null) {
+            return current;
+        }
+        if (current == null || candidate.distance() < current.distance()) {
+            return candidate;
+        }
+        return current;
+    }
+
+    private String tooltip(String label, String metric, String value) {
+        return "<html><b>" + label + "</b><br>" + metric + ": " + value + "</html>";
+    }
+
+    private record TooltipCandidate(int distance, String text) {
     }
 
     private String hourLabel(String time) {

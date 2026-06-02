@@ -6,6 +6,7 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Insets;
 import java.awt.RenderingHints;
+import java.awt.event.MouseEvent;
 import java.awt.geom.Path2D;
 import java.util.List;
 import java.util.Locale;
@@ -29,6 +30,7 @@ public class DailyWeatherChartPanel extends SurfacePanel {
         setBorder(AppTheme.cardBorder());
         setPreferredSize(new Dimension(420, 285));
         setMinimumSize(new Dimension(260, 235));
+        setToolTipText("");
     }
 
     /**
@@ -79,6 +81,45 @@ public class DailyWeatherChartPanel extends SurfacePanel {
         } finally {
             g2.dispose();
         }
+    }
+
+    @Override
+    public String getToolTipText(MouseEvent event) {
+        if (forecasts.isEmpty()) {
+            return null;
+        }
+
+        Insets insets = getInsets();
+        int left = insets.left + 44;
+        int right = Math.max(left + 1, getWidth() - insets.right - 14);
+        int top = insets.top + 76;
+        int bottom = Math.max(top + 1, getHeight() - insets.bottom - 48);
+
+        double minTemp = forecasts.stream().mapToDouble(DailyForecast::lowTemperature).min().orElse(0);
+        double maxTemp = forecasts.stream().mapToDouble(DailyForecast::highTemperature).max().orElse(1);
+        double padding = Math.max(1.0, (maxTemp - minTemp) * 0.18);
+        minTemp -= padding;
+        maxTemp += padding;
+        double maxRain = Math.max(1.0, forecasts.stream().mapToDouble(DailyForecast::precipitation).max().orElse(0));
+
+        TooltipCandidate best = null;
+        int count = forecasts.size();
+        for (int i = 0; i < count; i++) {
+            DailyForecast forecast = forecasts.get(i);
+            int x = xAt(i, count, left, right);
+            int highY = yAt(forecast.highTemperature(), minTemp, maxTemp, top, bottom);
+            best = closer(best, pointTooltip(event, x, highY, 11,
+                    tooltip(dateLabel(forecast.date()), "Maks.", format(forecast.highTemperature()) + " °C")));
+
+            int lowY = yAt(forecast.lowTemperature(), minTemp, maxTemp, top, bottom);
+            best = closer(best, pointTooltip(event, x, lowY, 11,
+                    tooltip(dateLabel(forecast.date()), "Min.", format(forecast.lowTemperature()) + " °C")));
+
+            TooltipCandidate rain = rainTooltip(event, forecast, x, count, left, right, bottom, maxRain);
+            best = closer(best, rain);
+        }
+
+        return best == null ? null : best.text();
     }
 
     private void drawTitle(Graphics2D g2, int x, int y, String title, String subtitle) {
@@ -214,6 +255,65 @@ public class DailyWeatherChartPanel extends SurfacePanel {
         }
         double ratio = (value - min) / (max - min);
         return bottom - (int) Math.round((bottom - top) * ratio);
+    }
+
+    private TooltipCandidate pointTooltip(MouseEvent event, int x, int y, int radius, String text) {
+        int dx = event.getX() - x;
+        int dy = event.getY() - y;
+        int distance = (dx * dx) + (dy * dy);
+        return distance <= radius * radius ? new TooltipCandidate(distance, text) : null;
+    }
+
+    private TooltipCandidate rainTooltip(
+            MouseEvent event,
+            DailyForecast forecast,
+            int x,
+            int count,
+            int left,
+            int right,
+            int bottom,
+            double maxRain
+    ) {
+        if (forecast.precipitation() <= 0) {
+            return null;
+        }
+
+        int width = Math.max(8, (right - left) / Math.max(16, count * 3));
+        int height = (int) Math.round((forecast.precipitation() / maxRain) * 54);
+        if (height < 3) {
+            height = 3;
+        }
+
+        int barLeft = x - width / 2;
+        int barRight = barLeft + width;
+        int barTop = bottom - height;
+        if (event.getX() >= barLeft - 2 && event.getX() <= barRight + 2
+                && event.getY() >= barTop - 2 && event.getY() <= bottom + 2) {
+            int centerY = barTop + height / 2;
+            int dx = event.getX() - x;
+            int dy = event.getY() - centerY;
+            int distance = (dx * dx) + (dy * dy);
+            return new TooltipCandidate(distance,
+                    tooltip(dateLabel(forecast.date()), "Reshje", format(forecast.precipitation()) + " mm"));
+        }
+        return null;
+    }
+
+    private TooltipCandidate closer(TooltipCandidate current, TooltipCandidate candidate) {
+        if (candidate == null) {
+            return current;
+        }
+        if (current == null || candidate.distance() < current.distance()) {
+            return candidate;
+        }
+        return current;
+    }
+
+    private String tooltip(String label, String metric, String value) {
+        return "<html><b>" + label + "</b><br>" + metric + ": " + value + "</html>";
+    }
+
+    private record TooltipCandidate(int distance, String text) {
     }
 
     private String dateLabel(String date) {
