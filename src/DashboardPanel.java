@@ -63,7 +63,8 @@ public class DashboardPanel extends SkyBackgroundPanel {
     private DashboardBodyPanel dashboardBody;
     private final JTextField cityField = AppTheme.textField();
     private final JButton searchButton = AppTheme.primaryButton("Kërko");
-    private final JButton loadSavedCityButton = AppTheme.secondaryButton("Hap të ruajturin");
+    private final JButton loadSavedCityButton = AppTheme.secondaryButton("Hap");
+    private final JButton removeSavedCityButton = AppTheme.secondaryButton("Hiq");
     private final JButton saveCityButton = AppTheme.warmButton("Ruaj në listë");
     private final JButton logoutButton = AppTheme.secondaryButton("Dil");
     private final DefaultComboBoxModel<SavedCity> savedCityModel = new DefaultComboBoxModel<>();
@@ -128,8 +129,10 @@ public class DashboardPanel extends SkyBackgroundPanel {
         styleSavedCityBox();
         configureCitySuggestions();
         loadSavedCityButton.setToolTipText("Ngarkon qytetin e zgjedhur nga lista jote.");
+        removeSavedCityButton.setToolTipText("Heq qytetin e zgjedhur nga lista jote.");
         saveCityButton.setToolTipText("Shton qytetin që po shfaqet në listën tënde të ruajtur.");
         loadSavedCityButton.setEnabled(false);
+        removeSavedCityButton.setEnabled(false);
         saveCityButton.setEnabled(false);
         savedCityBox.setEnabled(false);
 
@@ -142,6 +145,7 @@ public class DashboardPanel extends SkyBackgroundPanel {
         });
         searchButton.addActionListener(event -> searchCurrentCity());
         loadSavedCityButton.addActionListener(event -> loadSelectedSavedCity());
+        removeSavedCityButton.addActionListener(event -> removeSelectedSavedCity());
         saveCityButton.addActionListener(event -> saveCurrentCity());
         logoutButton.addActionListener(event -> app.showLogin());
     }
@@ -453,6 +457,7 @@ public class DashboardPanel extends SkyBackgroundPanel {
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         actions.setOpaque(false);
         actions.add(loadSavedCityButton);
+        actions.add(removeSavedCityButton);
         actions.add(saveCityButton);
 
         row.add(savedPicker, BorderLayout.CENTER);
@@ -763,6 +768,44 @@ public class DashboardPanel extends SkyBackgroundPanel {
     }
 
     /**
+     * Removes the selected city from the user's saved-city list.
+     */
+    private void removeSelectedSavedCity() {
+        SavedCity savedCity = (SavedCity) savedCityBox.getSelectedItem();
+        if (savedCity == null || user == null) {
+            JOptionPane.showMessageDialog(this, "Zgjidh një qytet të ruajtur për ta hequr.", "Lista është bosh", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        int choice = JOptionPane.showConfirmDialog(
+                this,
+                "Të hiqet \"" + savedCity.displayName() + "\" nga lista e qyteteve të ruajtura?",
+                "Hiq qytetin",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE
+        );
+        if (choice != JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        try {
+            database.deleteSavedCity(user, savedCity);
+            if (sameText(user.preferredCity(), savedCity.city())) {
+                user.setPreferredCity("");
+            }
+            loadSavedCities();
+            statusLabel.setText(savedCity.displayName() + " u hoq nga lista jote.");
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Qyteti nuk mund të hiqej.\n\n" + ex.getMessage(),
+                    "Heqja dështoi",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        }
+    }
+
+    /**
      * Fetches weather data from a typed query or a previously saved location.
      */
     private void loadWeather(String city, LocationResult savedLocation, boolean fromSavedCity) {
@@ -834,7 +877,7 @@ public class DashboardPanel extends SkyBackgroundPanel {
         forecastModel.setRowCount(0);
         for (DailyForecast day : weather.dailyForecasts()) {
             forecastModel.addRow(new Object[]{
-                    day.date(),
+                    compactDate(day.date()),
                     WeatherCodes.describeWithIcon(day.weatherCode()),
                     format(day.highTemperature()) + " °C",
                     format(day.lowTemperature()) + " °C",
@@ -915,6 +958,7 @@ public class DashboardPanel extends SkyBackgroundPanel {
         boolean hasSavedCities = savedCityModel.getSize() > 0;
         savedCityBox.setEnabled(!loading && hasSavedCities);
         loadSavedCityButton.setEnabled(!loading && hasSavedCities);
+        removeSavedCityButton.setEnabled(!loading && hasSavedCities);
     }
 
     /**
@@ -1006,5 +1050,15 @@ public class DashboardPanel extends SkyBackgroundPanel {
      */
     private String format(double value) {
         return String.format(Locale.US, "%.1f", value);
+    }
+
+    /**
+     * Keeps forecast table dates compact so the day and month remain visible.
+     */
+    private String compactDate(String date) {
+        if (date != null && date.length() >= 10) {
+            return date.substring(8, 10) + "/" + date.substring(5, 7);
+        }
+        return date == null ? "" : date;
     }
 }

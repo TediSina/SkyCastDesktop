@@ -307,6 +307,51 @@ public class Database {
     }
 
     /**
+     * Removes one saved city from the user's shortcut list.
+     *
+     * @param user owner of the saved city
+     * @param city saved city to remove
+     * @throws SQLException when the delete fails
+     */
+    public void deleteSavedCity(User user, SavedCity city) throws SQLException {
+        if (user == null || city == null) {
+            return;
+        }
+
+        String deleteSql = "DELETE FROM saved_cities WHERE id = ? AND user_id = ?";
+        String clearPreferredSql = """
+                UPDATE users
+                SET preferred_city = ''
+                WHERE id = ?
+                  AND lower(trim(preferred_city)) = lower(trim(?))
+                """;
+
+        try (Connection connection = getConnection()) {
+            boolean originalAutoCommit = connection.getAutoCommit();
+            connection.setAutoCommit(false);
+            try {
+                try (PreparedStatement statement = connection.prepareStatement(deleteSql)) {
+                    statement.setInt(1, city.id());
+                    statement.setInt(2, user.id());
+                    statement.executeUpdate();
+                }
+
+                try (PreparedStatement statement = connection.prepareStatement(clearPreferredSql)) {
+                    statement.setInt(1, user.id());
+                    statement.setString(2, city.city());
+                    statement.executeUpdate();
+                }
+                connection.commit();
+            } catch (SQLException ex) {
+                connection.rollback();
+                throw ex;
+            } finally {
+                connection.setAutoCommit(originalAutoCommit);
+            }
+        }
+    }
+
+    /**
      * Verifies that the SQLite JDBC driver is present before opening connections.
      */
     private void loadDriver() {
