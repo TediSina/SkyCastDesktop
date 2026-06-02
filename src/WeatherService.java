@@ -84,6 +84,7 @@ public class WeatherService {
                 "%s?latitude=%.6f&longitude=%.6f"
                         + "&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,"
                         + "precipitation,weather_code,wind_speed_10m,wind_direction_10m"
+                        + "&hourly=temperature_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m"
                         + "&daily=weather_code,temperature_2m_max,temperature_2m_min,"
                         + "precipitation_sum,wind_speed_10m_max"
                         + "&timezone=auto",
@@ -94,11 +95,13 @@ public class WeatherService {
 
         Map<String, Object> response = requestJson(query);
         Map<String, Object> current = object(response.get("current"));
+        Map<String, Object> hourly = object(response.get("hourly"));
         Map<String, Object> daily = object(response.get("daily"));
+        String observedAt = text(current.get("time"));
 
         return new WeatherData(
                 location,
-                text(current.get("time")),
+                observedAt,
                 number(current.get("temperature_2m")),
                 number(current.get("apparent_temperature")),
                 integer(current.get("relative_humidity_2m")),
@@ -106,8 +109,37 @@ public class WeatherService {
                 number(current.get("wind_speed_10m")),
                 integer(current.get("wind_direction_10m")),
                 integer(current.get("weather_code")),
+                readHourlyForecasts(hourly, observedAt),
                 readDailyForecasts(daily)
         );
+    }
+
+    /**
+     * Converts Open-Meteo hourly arrays into the next twelve chart points.
+     */
+    private List<HourlyForecast> readHourlyForecasts(Map<String, Object> hourly, String observedAt) {
+        List<Object> times = list(hourly.get("time"));
+        List<Object> temperatures = list(hourly.get("temperature_2m"));
+        List<Object> apparent = list(hourly.get("apparent_temperature"));
+        List<Object> rain = list(hourly.get("precipitation"));
+        List<Object> codes = list(hourly.get("weather_code"));
+        List<Object> wind = list(hourly.get("wind_speed_10m"));
+
+        int count = minimumSize(times, temperatures, apparent, rain, codes, wind);
+        int start = firstHourlyIndex(times, observedAt, count);
+        int end = Math.min(count, start + 12);
+        List<HourlyForecast> forecasts = new ArrayList<>();
+        for (int i = start; i < end; i++) {
+            forecasts.add(new HourlyForecast(
+                    text(times.get(i)),
+                    number(temperatures.get(i)),
+                    number(apparent.get(i)),
+                    number(rain.get(i)),
+                    number(wind.get(i)),
+                    integer(codes.get(i))
+            ));
+        }
+        return forecasts;
     }
 
     /**
@@ -134,6 +166,34 @@ public class WeatherService {
             ));
         }
         return forecasts;
+    }
+
+    /**
+     * Finds the first hourly entry at or after the current observation time.
+     */
+    private int firstHourlyIndex(List<Object> times, String observedAt, int count) {
+        if (observedAt == null || observedAt.isBlank()) {
+            return 0;
+        }
+
+        for (int i = 0; i < count; i++) {
+            if (text(times.get(i)).compareTo(observedAt) >= 0) {
+                return i;
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * Returns the shortest size from the arrays that must align by index.
+     */
+    @SafeVarargs
+    private int minimumSize(List<Object> first, List<Object>... rest) {
+        int min = first.size();
+        for (List<Object> values : rest) {
+            min = Math.min(min, values.size());
+        }
+        return min;
     }
 
     /**

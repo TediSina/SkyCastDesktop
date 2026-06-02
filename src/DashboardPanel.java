@@ -7,6 +7,9 @@ import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.awt.Rectangle;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -26,6 +29,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
+import javax.swing.Scrollable;
 import javax.swing.JTable;
 import javax.swing.JTextField;
 import javax.swing.KeyStroke;
@@ -43,6 +47,7 @@ public class DashboardPanel extends SkyBackgroundPanel {
     private static final int CITY_SUGGESTION_LIMIT = 7;
     private static final int CITY_SUGGESTION_MIN_CHARS = 2;
     private static final int CITY_SUGGESTION_DELAY_MS = 300;
+    private static final int DASHBOARD_STACK_THRESHOLD = 980;
 
     private final SkyCastApp app;
     private final Database database;
@@ -54,6 +59,8 @@ public class DashboardPanel extends SkyBackgroundPanel {
     private boolean suppressSuggestionLookup;
     private SwingWorker<List<LocationResult>, Void> citySuggestionWorker;
     private String lastSuggestionQuery = "";
+    private boolean compactDashboardLayout;
+    private DashboardBodyPanel dashboardBody;
     private final JTextField cityField = AppTheme.textField();
     private final JButton searchButton = AppTheme.primaryButton("Kërko");
     private final JButton loadSavedCityButton = AppTheme.secondaryButton("Hap të ruajturin");
@@ -70,6 +77,12 @@ public class DashboardPanel extends SkyBackgroundPanel {
     private final JLabel locationLabel = AppTheme.section("Nuk ka qytet të ngarkuar");
     private final WeatherIconView weatherIconView = new WeatherIconView();
     private final WeatherCardPanel currentWeatherCard = new WeatherCardPanel();
+    private final JPanel sectionsPanel = new JPanel(new GridBagLayout());
+    private JPanel currentWeatherPanel;
+    private JPanel forecastPanel;
+    private JPanel historyPanel;
+    private final HourlyWeatherChartPanel hourlyChartPanel = new HourlyWeatherChartPanel();
+    private final DailyWeatherChartPanel dailyChartPanel = new DailyWeatherChartPanel();
     private final JLabel temperatureLabel = new JLabel("-- C");
     private final JLabel conditionLabel = AppTheme.muted("Kushtet aktuale do të shfaqen këtu.");
     private final JLabel feelsLikeLabel = valueLabel("--");
@@ -142,6 +155,8 @@ public class DashboardPanel extends SkyBackgroundPanel {
         this.user = user;
         this.currentWeather = null;
         saveCityButton.setEnabled(false);
+        hourlyChartPanel.setForecasts(List.of());
+        dailyChartPanel.setForecasts(List.of());
         welcomeLabel.setText("Mirë se erdhe, " + user.username());
         suppressSuggestionLookup = true;
         cityField.setText(user.preferredCity());
@@ -171,6 +186,8 @@ public class DashboardPanel extends SkyBackgroundPanel {
         savedCityBox.setBackground(AppTheme.FIELD);
         savedCityBox.setBorder(AppTheme.inputBorder());
         savedCityBox.setPreferredSize(new Dimension(360, 44));
+        savedCityBox.setMinimumSize(new Dimension(0, 44));
+        cityField.setMinimumSize(new Dimension(0, 44));
     }
 
     /**
@@ -296,30 +313,85 @@ public class DashboardPanel extends SkyBackgroundPanel {
     /**
      * Builds the dashboard body: search, current weather, forecast, and history.
      */
-    private JPanel createContent() {
-        JPanel content = new JPanel(new BorderLayout(18, 18));
-        content.setOpaque(false);
-        content.add(createSearchPanel(), BorderLayout.NORTH);
+    private JScrollPane createContent() {
+        dashboardBody = new DashboardBodyPanel();
+        dashboardBody.setLayout(new BorderLayout(18, 18));
+        dashboardBody.setOpaque(false);
+        dashboardBody.add(createSearchPanel(), BorderLayout.NORTH);
 
-        JPanel center = new JPanel(new GridBagLayout());
-        center.setOpaque(false);
+        sectionsPanel.setOpaque(false);
+        currentWeatherPanel = createCurrentWeatherPanel();
+        forecastPanel = createForecastPanel();
+        historyPanel = createHistoryPanel();
+        layoutDashboardSections(false);
+        dashboardBody.add(sectionsPanel, BorderLayout.CENTER);
+        dashboardBody.addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent event) {
+                updateDashboardLayout();
+            }
+        });
+
+        JScrollPane scrollPane = new JScrollPane(dashboardBody);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+        scrollPane.setOpaque(false);
+        scrollPane.getViewport().setOpaque(false);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(18);
+        scrollPane.getHorizontalScrollBar().setUnitIncrement(18);
+        return scrollPane;
+    }
+
+    /**
+     * Switches dashboard sections between wide two-column and compact stacked layouts.
+     */
+    private void updateDashboardLayout() {
+        if (dashboardBody == null) {
+            return;
+        }
+
+        boolean compact = dashboardBody.getWidth() < DASHBOARD_STACK_THRESHOLD;
+        if (compactDashboardLayout != compact || sectionsPanel.getComponentCount() == 0) {
+            layoutDashboardSections(compact);
+            compactDashboardLayout = compact;
+            sectionsPanel.revalidate();
+            sectionsPanel.repaint();
+        }
+    }
+
+    /**
+     * Lays out all dashboard cards using the selected responsive mode.
+     */
+    private void layoutDashboardSections(boolean compact) {
+        sectionsPanel.removeAll();
+        if (compact) {
+            addDashboardSection(currentWeatherPanel, 0, 0, 1, 1.0, new Insets(0, 0, 14, 0));
+            addDashboardSection(forecastPanel, 0, 1, 1, 1.0, new Insets(0, 0, 14, 0));
+            addDashboardSection(hourlyChartPanel, 0, 2, 1, 1.0, new Insets(0, 0, 14, 0));
+            addDashboardSection(dailyChartPanel, 0, 3, 1, 1.0, new Insets(0, 0, 14, 0));
+            addDashboardSection(historyPanel, 0, 4, 1, 1.0, new Insets(0, 0, 0, 0));
+            return;
+        }
+
+        addDashboardSection(currentWeatherPanel, 0, 0, 1, 0.44, new Insets(0, 0, 18, 18));
+        addDashboardSection(forecastPanel, 1, 0, 1, 0.56, new Insets(0, 0, 18, 0));
+        addDashboardSection(hourlyChartPanel, 0, 1, 1, 0.5, new Insets(0, 0, 18, 18));
+        addDashboardSection(dailyChartPanel, 1, 1, 1, 0.5, new Insets(0, 0, 18, 0));
+        addDashboardSection(historyPanel, 0, 2, 2, 1.0, new Insets(0, 0, 0, 0));
+    }
+
+    /**
+     * Adds a dashboard card to the responsive grid.
+     */
+    private void addDashboardSection(Component component, int x, int y, int width, double weightx, Insets insets) {
         GridBagConstraints constraints = new GridBagConstraints();
-        constraints.insets = new Insets(0, 0, 0, 18);
+        constraints.gridx = x;
+        constraints.gridy = y;
+        constraints.gridwidth = width;
+        constraints.weightx = weightx;
+        constraints.weighty = 0;
         constraints.fill = GridBagConstraints.BOTH;
-        constraints.weightx = 0.48;
-        constraints.weighty = 1;
-        constraints.gridx = 0;
-        constraints.gridy = 0;
-        center.add(createCurrentWeatherPanel(), constraints);
-
-        constraints.insets = new Insets(0, 0, 0, 0);
-        constraints.weightx = 0.52;
-        constraints.gridx = 1;
-        center.add(createForecastPanel(), constraints);
-
-        content.add(center, BorderLayout.CENTER);
-        content.add(createHistoryPanel(), BorderLayout.SOUTH);
-        return content;
+        constraints.insets = insets;
+        sectionsPanel.add(component, constraints);
     }
 
     /**
@@ -395,7 +467,8 @@ public class DashboardPanel extends SkyBackgroundPanel {
         WeatherCardPanel panel = currentWeatherCard;
         panel.setLayout(new BorderLayout(12, 16));
         panel.setBorder(AppTheme.cardBorder());
-        panel.setPreferredSize(new Dimension(430, 370));
+        panel.setPreferredSize(new Dimension(380, 335));
+        panel.setMinimumSize(new Dimension(280, 300));
 
         JPanel top = new JPanel(new GridBagLayout());
         top.setOpaque(false);
@@ -445,6 +518,8 @@ public class DashboardPanel extends SkyBackgroundPanel {
         SurfacePanel panel = new SurfacePanel();
         panel.setLayout(new BorderLayout(10, 12));
         panel.setBorder(AppTheme.cardBorder());
+        panel.setPreferredSize(new Dimension(480, 335));
+        panel.setMinimumSize(new Dimension(280, 300));
 
         JTable table = new JTable(forecastModel);
         AppTheme.styleTable(table);
@@ -465,7 +540,8 @@ public class DashboardPanel extends SkyBackgroundPanel {
         SurfacePanel panel = new SurfacePanel(new Color(255, 255, 255, 236), new Color(197, 218, 226));
         panel.setLayout(new BorderLayout(10, 12));
         panel.setBorder(AppTheme.cardBorder());
-        panel.setPreferredSize(new Dimension(0, 210));
+        panel.setPreferredSize(new Dimension(0, 225));
+        panel.setMinimumSize(new Dimension(280, 190));
 
         JTable table = new JTable(historyModel);
         AppTheme.styleTable(table);
@@ -752,6 +828,8 @@ public class DashboardPanel extends SkyBackgroundPanel {
         windLabel.setText(format(weather.windSpeed()) + " km/h");
         rainLabel.setText(format(weather.precipitation()) + " mm");
         observedLabel.setText("Vëzhguar më: " + weather.observedAt());
+        hourlyChartPanel.setForecasts(weather.hourlyForecasts());
+        dailyChartPanel.setForecasts(weather.dailyForecasts());
 
         forecastModel.setRowCount(0);
         for (DailyForecast day : weather.dailyForecasts()) {
@@ -891,6 +969,36 @@ public class DashboardPanel extends SkyBackgroundPanel {
         String cleanFirst = first == null ? "" : first.trim();
         String cleanSecond = second == null ? "" : second.trim();
         return cleanFirst.equalsIgnoreCase(cleanSecond);
+    }
+
+    /**
+     * Tracks viewport width while allowing vertical scrolling for compact windows.
+     */
+    private static class DashboardBodyPanel extends JPanel implements Scrollable {
+        @Override
+        public Dimension getPreferredScrollableViewportSize() {
+            return getPreferredSize();
+        }
+
+        @Override
+        public int getScrollableUnitIncrement(Rectangle visibleRect, int orientation, int direction) {
+            return 24;
+        }
+
+        @Override
+        public int getScrollableBlockIncrement(Rectangle visibleRect, int orientation, int direction) {
+            return Math.max(80, visibleRect.height - 80);
+        }
+
+        @Override
+        public boolean getScrollableTracksViewportWidth() {
+            return true;
+        }
+
+        @Override
+        public boolean getScrollableTracksViewportHeight() {
+            return false;
+        }
     }
 
     /**

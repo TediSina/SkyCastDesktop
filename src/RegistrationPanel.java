@@ -4,11 +4,13 @@ import java.awt.FlowLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPasswordField;
+import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 
 /**
@@ -36,9 +38,9 @@ public class RegistrationPanel extends SkyBackgroundPanel {
         this.authService = authService;
 
         cityField.setText("Tirana");
-        setLayout(new GridBagLayout());
+        setLayout(new BorderLayout());
         setBorder(AppTheme.cardBorder());
-        add(createShell());
+        add(createScrollableShell(), BorderLayout.CENTER);
 
         usernameField.addActionListener(event -> register());
         emailField.addActionListener(event -> register());
@@ -57,12 +59,29 @@ public class RegistrationPanel extends SkyBackgroundPanel {
     }
 
     /**
+     * Centers the registration card while allowing small windows to scroll.
+     */
+    private JScrollPane createScrollableShell() {
+        JPanel center = new JPanel(new GridBagLayout());
+        center.setOpaque(false);
+        center.add(createShell());
+
+        JScrollPane scrollPane = new JScrollPane(center);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+        scrollPane.setOpaque(false);
+        scrollPane.getViewport().setOpaque(false);
+        scrollPane.getVerticalScrollBar().setUnitIncrement(18);
+        return scrollPane;
+    }
+
+    /**
      * Builds the two-column registration layout.
      */
     private JPanel createShell() {
         JPanel shell = new JPanel(new BorderLayout(0, 0));
         shell.setOpaque(false);
         shell.setPreferredSize(new Dimension(980, 560));
+        shell.setMinimumSize(new Dimension(0, 0));
         shell.add(new AuthShowcasePanel("Qyteti yt,\nme një vështrim"), BorderLayout.WEST);
         shell.add(createCard(), BorderLayout.CENTER);
         return shell;

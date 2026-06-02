@@ -12,6 +12,7 @@ import java.util.List;
  * @param windSpeed current wind speed in km/h
  * @param windDirection current wind direction in degrees
  * @param weatherCode Open-Meteo weather condition code
+ * @param hourlyForecasts hourly forecast rows, usually the next twelve hours
  * @param dailyForecasts daily forecast rows, usually seven days
  */
 public record WeatherData(
@@ -24,6 +25,7 @@ public record WeatherData(
         double windSpeed,
         int windDirection,
         int weatherCode,
+        List<HourlyForecast> hourlyForecasts,
         List<DailyForecast> dailyForecasts
 ) {
 }
