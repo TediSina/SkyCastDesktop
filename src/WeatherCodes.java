@@ -54,12 +54,12 @@ public final class WeatherCodes {
     }
 
     /**
-     * Combines the emoji icon and localized description for table display.
+     * Returns a localized description for text labels and table cells.
      *
      * @param code Open-Meteo weather code
-     * @return icon plus description
+     * @return localized condition description
      */
     public static String describeWithIcon(int code) {
-        return icon(code) + " " + describe(code);
+        return describe(code);
     }
 }
