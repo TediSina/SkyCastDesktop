@@ -11,6 +11,8 @@ import java.util.List;
 import java.util.Locale;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
+import javax.swing.DefaultComboBoxModel;
+import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -30,11 +32,14 @@ public class DashboardPanel extends SkyBackgroundPanel {
 
     private User user;
     private WeatherData currentWeather;
+    private boolean loading;
     private final JTextField cityField = AppTheme.textField();
     private final JButton searchButton = AppTheme.primaryButton("Kërko");
-    private final JButton loadSavedCityButton = AppTheme.secondaryButton("Hap qytetin");
-    private final JButton saveCityButton = AppTheme.warmButton("Ruaj qytetin");
+    private final JButton loadSavedCityButton = AppTheme.secondaryButton("Hap të ruajturin");
+    private final JButton saveCityButton = AppTheme.warmButton("Ruaj në listë");
     private final JButton logoutButton = AppTheme.secondaryButton("Dil");
+    private final DefaultComboBoxModel<SavedCity> savedCityModel = new DefaultComboBoxModel<>();
+    private final JComboBox<SavedCity> savedCityBox = new JComboBox<>(savedCityModel);
     private final JLabel welcomeLabel = AppTheme.section("");
     private final JLabel statusLabel = AppTheme.muted("Kërko një qytet për të ngarkuar motin drejtpërdrejt nga Open-Meteo.");
     private final JLabel locationLabel = AppTheme.section("Nuk ka qytet të ngarkuar");
@@ -82,18 +87,16 @@ public class DashboardPanel extends SkyBackgroundPanel {
         add(createHeader(), BorderLayout.NORTH);
         add(createContent(), BorderLayout.CENTER);
 
-        loadSavedCityButton.setToolTipText("Ngarkon qytetin e preferuar të ruajtur në llogari.");
-        saveCityButton.setToolTipText("Ruan qytetin që po shfaqet si qytetin tënd të preferuar.");
+        styleSavedCityBox();
+        loadSavedCityButton.setToolTipText("Ngarkon qytetin e zgjedhur nga lista jote.");
+        saveCityButton.setToolTipText("Shton qytetin që po shfaqet në listën tënde të ruajtur.");
+        loadSavedCityButton.setEnabled(false);
         saveCityButton.setEnabled(false);
+        savedCityBox.setEnabled(false);
 
         cityField.addActionListener(event -> searchCurrentCity());
         searchButton.addActionListener(event -> searchCurrentCity());
-        loadSavedCityButton.addActionListener(event -> {
-            if (user != null) {
-                cityField.setText(user.preferredCity());
-                searchCurrentCity();
-            }
-        });
+        loadSavedCityButton.addActionListener(event -> loadSelectedSavedCity());
         saveCityButton.addActionListener(event -> saveCurrentCity());
         logoutButton.addActionListener(event -> app.showLogin());
     }
@@ -109,6 +112,7 @@ public class DashboardPanel extends SkyBackgroundPanel {
         saveCityButton.setEnabled(false);
         welcomeLabel.setText("Mirë se erdhe, " + user.username());
         cityField.setText(user.preferredCity());
+        loadSavedCities();
         loadHistory();
         if (user.preferredCity() != null && !user.preferredCity().isBlank()) {
             searchCurrentCity();
@@ -122,6 +126,17 @@ public class DashboardPanel extends SkyBackgroundPanel {
      */
     public JButton defaultButton() {
         return searchButton;
+    }
+
+    /**
+     * Applies app styling to the saved-city selector.
+     */
+    private void styleSavedCityBox() {
+        savedCityBox.setFont(AppTheme.BODY);
+        savedCityBox.setForeground(AppTheme.TEXT);
+        savedCityBox.setBackground(AppTheme.FIELD);
+        savedCityBox.setBorder(AppTheme.inputBorder());
+        savedCityBox.setPreferredSize(new Dimension(360, 44));
     }
 
     /**
@@ -191,21 +206,62 @@ public class DashboardPanel extends SkyBackgroundPanel {
         panel.setLayout(new BorderLayout(14, 8));
         panel.setBorder(AppTheme.compactCardBorder());
 
+        JPanel rows = new JPanel(new GridBagLayout());
+        rows.setOpaque(false);
+        GridBagConstraints constraints = new GridBagConstraints();
+        constraints.gridx = 0;
+        constraints.gridy = 0;
+        constraints.weightx = 1;
+        constraints.fill = GridBagConstraints.HORIZONTAL;
+        rows.add(createSearchRow(), constraints);
+
+        constraints.gridy = 1;
+        constraints.insets = new Insets(10, 0, 0, 0);
+        rows.add(createSavedCitiesRow(), constraints);
+
+        panel.add(AppTheme.section("Moti sipas qytetit"), BorderLayout.NORTH);
+        panel.add(rows, BorderLayout.CENTER);
+        panel.add(statusLabel, BorderLayout.SOUTH);
+        return panel;
+    }
+
+    /**
+     * Builds the direct city-search row.
+     */
+    private JPanel createSearchRow() {
         JPanel row = new JPanel(new BorderLayout(10, 0));
         row.setOpaque(false);
         row.add(cityField, BorderLayout.CENTER);
 
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
         actions.setOpaque(false);
-        actions.add(loadSavedCityButton);
-        actions.add(saveCityButton);
         actions.add(searchButton);
         row.add(actions, BorderLayout.EAST);
+        return row;
+    }
 
-        panel.add(AppTheme.section("Moti sipas qytetit"), BorderLayout.NORTH);
-        panel.add(row, BorderLayout.CENTER);
-        panel.add(statusLabel, BorderLayout.SOUTH);
-        return panel;
+    /**
+     * Builds controls for saved-city selection and saving.
+     */
+    private JPanel createSavedCitiesRow() {
+        JPanel row = new JPanel(new BorderLayout(10, 0));
+        row.setOpaque(false);
+
+        JPanel savedPicker = new JPanel(new BorderLayout(8, 0));
+        savedPicker.setOpaque(false);
+        JLabel label = AppTheme.eyebrow("QYTETE TË RUAJTURA");
+        label.setBorder(BorderFactory.createEmptyBorder(11, 0, 0, 0));
+        savedPicker.add(label, BorderLayout.WEST);
+        savedPicker.add(savedCityBox, BorderLayout.CENTER);
+
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        actions.setOpaque(false);
+        actions.add(loadSavedCityButton);
+        actions.add(saveCityButton);
+
+        row.add(savedPicker, BorderLayout.CENTER);
+        row.add(actions, BorderLayout.EAST);
+        return row;
     }
 
     /**
@@ -337,12 +393,34 @@ public class DashboardPanel extends SkyBackgroundPanel {
      * Resolves the city, fetches weather data, and saves the lookup to history.
      */
     private void searchCurrentCity() {
-        User activeUser = user;
         String city = cityField.getText().trim();
         if (city.isBlank()) {
             JOptionPane.showMessageDialog(this, "Shkruaj emrin e qytetit.", "Mungon qyteti", JOptionPane.WARNING_MESSAGE);
             return;
         }
+
+        loadWeather(city, null, false);
+    }
+
+    /**
+     * Loads the selected saved city into the dashboard.
+     */
+    private void loadSelectedSavedCity() {
+        SavedCity savedCity = (SavedCity) savedCityBox.getSelectedItem();
+        if (savedCity == null) {
+            JOptionPane.showMessageDialog(this, "Nuk ka qytet të ruajtur për t'u hapur.", "Lista është bosh", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        cityField.setText(savedCity.city());
+        loadWeather(savedCity.displayName(), savedCity.toLocationResult(), true);
+    }
+
+    /**
+     * Fetches weather data from a typed query or a previously saved location.
+     */
+    private void loadWeather(String city, LocationResult savedLocation, boolean fromSavedCity) {
+        User activeUser = user;
         if (activeUser == null) {
             return;
         }
@@ -352,7 +430,7 @@ public class DashboardPanel extends SkyBackgroundPanel {
         SwingWorker<WeatherData, Void> worker = new SwingWorker<>() {
             @Override
             protected WeatherData doInBackground() throws Exception {
-                LocationResult location = weatherService.searchLocation(city);
+                LocationResult location = savedLocation == null ? weatherService.searchLocation(city) : savedLocation;
                 return weatherService.fetchWeather(location);
             }
 
@@ -362,6 +440,11 @@ public class DashboardPanel extends SkyBackgroundPanel {
                     WeatherData weather = get();
                     showWeather(weather);
                     database.saveWeatherSearch(activeUser, weather);
+                    if (fromSavedCity && savedLocation == null) {
+                        database.saveCity(activeUser, weather.location());
+                        loadSavedCities();
+                        selectSavedCity(weather.location());
+                    }
                     loadHistory();
                     statusLabel.setText("Të dhënat u ngarkuan drejtpërdrejt nga Open-Meteo.");
                 } catch (Exception ex) {
@@ -437,18 +520,67 @@ public class DashboardPanel extends SkyBackgroundPanel {
     }
 
     /**
+     * Loads the user's saved city shortcuts into the selector.
+     */
+    private void loadSavedCities() {
+        savedCityModel.removeAllElements();
+        if (user == null) {
+            updateSavedCityControls();
+            return;
+        }
+
+        try {
+            List<SavedCity> cities = database.savedCities(user);
+            for (SavedCity city : cities) {
+                savedCityModel.addElement(city);
+            }
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Qytetet e ruajtura nuk mund të ngarkoheshin.\n\n" + ex.getMessage(),
+                    "Gabim gjatë ngarkimit",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        }
+        updateSavedCityControls();
+    }
+
+    /**
+     * Selects the saved-city combo item that matches the displayed weather.
+     */
+    private void selectSavedCity(LocationResult location) {
+        for (int i = 0; i < savedCityModel.getSize(); i++) {
+            SavedCity savedCity = savedCityModel.getElementAt(i);
+            if (matches(savedCity, location)) {
+                savedCityBox.setSelectedItem(savedCity);
+                return;
+            }
+        }
+    }
+
+    /**
+     * Keeps saved-city controls disabled while loading or when the list is empty.
+     */
+    private void updateSavedCityControls() {
+        boolean hasSavedCities = savedCityModel.getSize() > 0;
+        savedCityBox.setEnabled(!loading && hasSavedCities);
+        loadSavedCityButton.setEnabled(!loading && hasSavedCities);
+    }
+
+    /**
      * Enables/disables controls while a weather request is running.
      */
     private void setLoading(boolean loading, String text) {
+        this.loading = loading;
         searchButton.setEnabled(!loading);
-        loadSavedCityButton.setEnabled(!loading);
         saveCityButton.setEnabled(!loading && currentWeather != null);
         cityField.setEnabled(!loading);
+        updateSavedCityControls();
         statusLabel.setText(text);
     }
 
     /**
-     * Saves the currently displayed city as the user's preferred city.
+     * Saves the currently displayed city in the user's reusable city list.
      */
     private void saveCurrentCity() {
         if (user == null || currentWeather == null) {
@@ -457,8 +589,10 @@ public class DashboardPanel extends SkyBackgroundPanel {
         }
 
         try {
-            app.authService().updatePreferredCity(user, currentWeather.location().name());
-            statusLabel.setText(currentWeather.location().displayName() + " u ruajt si qyteti yt i preferuar.");
+            database.saveCity(user, currentWeather.location());
+            loadSavedCities();
+            selectSavedCity(currentWeather.location());
+            statusLabel.setText(currentWeather.location().displayName() + " u ruajt në listën tënde.");
         } catch (SQLException ex) {
             JOptionPane.showMessageDialog(
                     this,
@@ -467,6 +601,24 @@ public class DashboardPanel extends SkyBackgroundPanel {
                     JOptionPane.ERROR_MESSAGE
             );
         }
+    }
+
+    /**
+     * Compares a saved shortcut with a resolved weather location.
+     */
+    private boolean matches(SavedCity savedCity, LocationResult location) {
+        return sameText(savedCity.city(), location.name())
+                && sameText(savedCity.country(), location.country())
+                && sameText(savedCity.adminArea(), location.adminArea());
+    }
+
+    /**
+     * Null-safe case-insensitive text comparison.
+     */
+    private boolean sameText(String first, String second) {
+        String cleanFirst = first == null ? "" : first.trim();
+        String cleanSecond = second == null ? "" : second.trim();
+        return cleanFirst.equalsIgnoreCase(cleanSecond);
     }
 
     /**
