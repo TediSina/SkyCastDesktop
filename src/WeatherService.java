@@ -31,24 +31,44 @@ public class WeatherService {
      * @throws InterruptedException when the HTTP request is interrupted
      */
     public LocationResult searchLocation(String city) throws IOException, InterruptedException {
-        String query = GEOCODING_URL
-                + "?name=" + encode(city)
-                + "&count=1&language=sq&format=json";
-        Map<String, Object> response = requestJson(query);
-        List<Object> results = list(response.get("results"));
-        if (results.isEmpty()) {
+        List<LocationResult> locations = searchLocations(city, 1);
+        if (locations.isEmpty()) {
             throw new IOException("Nuk u gjet asnjë qytet për \"" + city + "\".");
         }
+        return locations.get(0);
+    }
 
-        Map<String, Object> first = object(results.get(0));
-        return new LocationResult(
-                text(first.get("name")),
-                text(first.get("country")),
-                text(first.get("admin1")),
-                number(first.get("latitude")),
-                number(first.get("longitude")),
-                text(first.get("timezone"))
-        );
+    /**
+     * Finds matching locations for autocomplete and disambiguation.
+     *
+     * @param city partial or full city name typed by the user
+     * @param limit maximum number of locations to return
+     * @return matching locations from Open-Meteo
+     * @throws IOException when the API response is invalid
+     * @throws InterruptedException when the HTTP request is interrupted
+     */
+    public List<LocationResult> searchLocations(String city, int limit) throws IOException, InterruptedException {
+        String query = GEOCODING_URL
+                + "?name=" + encode(city)
+                + "&count=" + Math.max(1, limit)
+                + "&language=sq&format=json";
+        Map<String, Object> response = requestJson(query);
+        List<Object> results = list(response.get("results"));
+        List<LocationResult> locations = new ArrayList<>();
+
+        for (Object result : results) {
+            Map<String, Object> item = object(result);
+            locations.add(new LocationResult(
+                    text(item.get("name")),
+                    text(item.get("country")),
+                    text(item.get("admin1")),
+                    number(item.get("latitude")),
+                    number(item.get("longitude")),
+                    text(item.get("timezone"))
+            ));
+        }
+
+        return locations;
     }
 
     /**

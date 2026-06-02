@@ -1,31 +1,49 @@
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.sql.SQLException;
 import java.util.List;
 import java.util.Locale;
+import javax.swing.AbstractAction;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.DefaultComboBoxModel;
+import javax.swing.DefaultListCellRenderer;
+import javax.swing.DefaultListModel;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
+import javax.swing.JList;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
 import javax.swing.JTextField;
+import javax.swing.KeyStroke;
+import javax.swing.ListSelectionModel;
 import javax.swing.SwingWorker;
+import javax.swing.Timer;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableModel;
 
 /**
  * Main authenticated screen for searching and displaying weather data.
  */
 public class DashboardPanel extends SkyBackgroundPanel {
+    private static final int CITY_SUGGESTION_LIMIT = 7;
+    private static final int CITY_SUGGESTION_MIN_CHARS = 2;
+    private static final int CITY_SUGGESTION_DELAY_MS = 300;
+
     private final SkyCastApp app;
     private final Database database;
     private final WeatherService weatherService;
@@ -33,6 +51,9 @@ public class DashboardPanel extends SkyBackgroundPanel {
     private User user;
     private WeatherData currentWeather;
     private boolean loading;
+    private boolean suppressSuggestionLookup;
+    private SwingWorker<List<LocationResult>, Void> citySuggestionWorker;
+    private String lastSuggestionQuery = "";
     private final JTextField cityField = AppTheme.textField();
     private final JButton searchButton = AppTheme.primaryButton("Kërko");
     private final JButton loadSavedCityButton = AppTheme.secondaryButton("Hap të ruajturin");
@@ -40,6 +61,10 @@ public class DashboardPanel extends SkyBackgroundPanel {
     private final JButton logoutButton = AppTheme.secondaryButton("Dil");
     private final DefaultComboBoxModel<SavedCity> savedCityModel = new DefaultComboBoxModel<>();
     private final JComboBox<SavedCity> savedCityBox = new JComboBox<>(savedCityModel);
+    private final DefaultListModel<LocationResult> citySuggestionModel = new DefaultListModel<>();
+    private final JList<LocationResult> citySuggestionList = new JList<>(citySuggestionModel);
+    private final JPopupMenu citySuggestionPopup = new JPopupMenu();
+    private final Timer citySuggestionTimer = new Timer(CITY_SUGGESTION_DELAY_MS, event -> loadCitySuggestions());
     private final JLabel welcomeLabel = AppTheme.section("");
     private final JLabel statusLabel = AppTheme.muted("Kërko një qytet për të ngarkuar motin drejtpërdrejt nga Open-Meteo.");
     private final JLabel locationLabel = AppTheme.section("Nuk ka qytet të ngarkuar");
@@ -88,13 +113,20 @@ public class DashboardPanel extends SkyBackgroundPanel {
         add(createContent(), BorderLayout.CENTER);
 
         styleSavedCityBox();
+        configureCitySuggestions();
         loadSavedCityButton.setToolTipText("Ngarkon qytetin e zgjedhur nga lista jote.");
         saveCityButton.setToolTipText("Shton qytetin që po shfaqet në listën tënde të ruajtur.");
         loadSavedCityButton.setEnabled(false);
         saveCityButton.setEnabled(false);
         savedCityBox.setEnabled(false);
 
-        cityField.addActionListener(event -> searchCurrentCity());
+        cityField.addActionListener(event -> {
+            if (citySuggestionPopup.isVisible() && citySuggestionList.getSelectedValue() != null) {
+                applyCitySuggestion(citySuggestionList.getSelectedValue());
+            } else {
+                searchCurrentCity();
+            }
+        });
         searchButton.addActionListener(event -> searchCurrentCity());
         loadSavedCityButton.addActionListener(event -> loadSelectedSavedCity());
         saveCityButton.addActionListener(event -> saveCurrentCity());
@@ -111,7 +143,9 @@ public class DashboardPanel extends SkyBackgroundPanel {
         this.currentWeather = null;
         saveCityButton.setEnabled(false);
         welcomeLabel.setText("Mirë se erdhe, " + user.username());
+        suppressSuggestionLookup = true;
         cityField.setText(user.preferredCity());
+        suppressSuggestionLookup = false;
         loadSavedCities();
         loadHistory();
         if (user.preferredCity() != null && !user.preferredCity().isBlank()) {
@@ -137,6 +171,96 @@ public class DashboardPanel extends SkyBackgroundPanel {
         savedCityBox.setBackground(AppTheme.FIELD);
         savedCityBox.setBorder(AppTheme.inputBorder());
         savedCityBox.setPreferredSize(new Dimension(360, 44));
+    }
+
+    /**
+     * Configures API-backed city suggestions for the search input.
+     */
+    private void configureCitySuggestions() {
+        citySuggestionTimer.setRepeats(false);
+        citySuggestionList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+        citySuggestionList.setVisibleRowCount(5);
+        citySuggestionList.setFixedCellHeight(42);
+        citySuggestionList.setFont(AppTheme.BODY);
+        citySuggestionList.setForeground(AppTheme.TEXT);
+        citySuggestionList.setBackground(Color.WHITE);
+        citySuggestionList.setSelectionBackground(new Color(213, 241, 239));
+        citySuggestionList.setSelectionForeground(AppTheme.PRIMARY_DARK);
+        citySuggestionList.setCellRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(
+                    JList<?> list,
+                    Object value,
+                    int index,
+                    boolean selected,
+                    boolean hasFocus
+            ) {
+                JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index, selected, hasFocus);
+                label.setBorder(BorderFactory.createEmptyBorder(7, 12, 7, 12));
+                label.setFont(selected ? AppTheme.BODY_BOLD : AppTheme.BODY);
+                if (value instanceof LocationResult location) {
+                    label.setText(location.displayName());
+                }
+                return label;
+            }
+        });
+
+        JScrollPane scrollPane = new JScrollPane(citySuggestionList);
+        scrollPane.setBorder(BorderFactory.createEmptyBorder());
+        scrollPane.getViewport().setBackground(Color.WHITE);
+        citySuggestionPopup.setBorder(BorderFactory.createLineBorder(new Color(184, 212, 220)));
+        citySuggestionPopup.setFocusable(false);
+        citySuggestionPopup.add(scrollPane);
+
+        cityField.getDocument().addDocumentListener(new DocumentListener() {
+            @Override
+            public void insertUpdate(DocumentEvent event) {
+                scheduleCitySuggestions();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent event) {
+                scheduleCitySuggestions();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent event) {
+                scheduleCitySuggestions();
+            }
+        });
+
+        citySuggestionList.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent event) {
+                if (event.getButton() == MouseEvent.BUTTON1) {
+                    applyCitySuggestion(citySuggestionList.getSelectedValue());
+                }
+            }
+        });
+
+        cityField.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_DOWN, 0), "citySuggestionDown");
+        cityField.getActionMap().put("citySuggestionDown", new AbstractAction() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent event) {
+                moveCitySuggestionSelection(1);
+            }
+        });
+
+        cityField.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_UP, 0), "citySuggestionUp");
+        cityField.getActionMap().put("citySuggestionUp", new AbstractAction() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent event) {
+                moveCitySuggestionSelection(-1);
+            }
+        });
+
+        cityField.getInputMap().put(KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0), "citySuggestionEscape");
+        cityField.getActionMap().put("citySuggestionEscape", new AbstractAction() {
+            @Override
+            public void actionPerformed(java.awt.event.ActionEvent event) {
+                hideCitySuggestions();
+            }
+        });
     }
 
     /**
@@ -403,6 +527,150 @@ public class DashboardPanel extends SkyBackgroundPanel {
     }
 
     /**
+     * Debounces typed city text before calling the geocoding API.
+     */
+    private void scheduleCitySuggestions() {
+        if (suppressSuggestionLookup || loading) {
+            return;
+        }
+
+        String query = cityField.getText().trim();
+        if (query.length() < CITY_SUGGESTION_MIN_CHARS) {
+            cancelCitySuggestionWorker();
+            hideCitySuggestions();
+            return;
+        }
+
+        if (query.equals(lastSuggestionQuery) && citySuggestionModel.getSize() > 0) {
+            showCitySuggestions();
+            return;
+        }
+
+        citySuggestionTimer.restart();
+    }
+
+    /**
+     * Requests current autocomplete suggestions from Open-Meteo.
+     */
+    private void loadCitySuggestions() {
+        String query = cityField.getText().trim();
+        if (query.length() < CITY_SUGGESTION_MIN_CHARS) {
+            hideCitySuggestions();
+            return;
+        }
+
+        cancelCitySuggestionWorker();
+        lastSuggestionQuery = query;
+        citySuggestionWorker = new SwingWorker<>() {
+            @Override
+            protected List<LocationResult> doInBackground() throws Exception {
+                return weatherService.searchLocations(query, CITY_SUGGESTION_LIMIT);
+            }
+
+            @Override
+            protected void done() {
+                if (isCancelled() || loading || !query.equals(cityField.getText().trim())) {
+                    return;
+                }
+
+                try {
+                    updateCitySuggestions(get());
+                } catch (Exception ex) {
+                    hideCitySuggestions();
+                }
+            }
+        };
+        citySuggestionWorker.execute();
+    }
+
+    /**
+     * Replaces visible suggestions with the newest resolved city list.
+     */
+    private void updateCitySuggestions(List<LocationResult> suggestions) {
+        citySuggestionModel.clear();
+        for (LocationResult location : suggestions) {
+            if (location.name() != null && !location.name().isBlank()) {
+                citySuggestionModel.addElement(location);
+            }
+        }
+
+        if (citySuggestionModel.isEmpty()) {
+            hideCitySuggestions();
+            return;
+        }
+
+        citySuggestionList.setSelectedIndex(0);
+        showCitySuggestions();
+    }
+
+    /**
+     * Displays the suggestion popup directly below the search field.
+     */
+    private void showCitySuggestions() {
+        if (citySuggestionModel.isEmpty() || !cityField.isShowing()) {
+            return;
+        }
+
+        int visibleRows = Math.min(citySuggestionModel.getSize(), citySuggestionList.getVisibleRowCount());
+        int popupHeight = (visibleRows * citySuggestionList.getFixedCellHeight()) + 3;
+        citySuggestionPopup.setPopupSize(cityField.getWidth(), popupHeight);
+        citySuggestionPopup.show(cityField, 0, cityField.getHeight() + 2);
+        cityField.requestFocusInWindow();
+    }
+
+    /**
+     * Hides autocomplete suggestions without clearing cached results.
+     */
+    private void hideCitySuggestions() {
+        citySuggestionTimer.stop();
+        citySuggestionPopup.setVisible(false);
+    }
+
+    /**
+     * Cancels any in-flight autocomplete request.
+     */
+    private void cancelCitySuggestionWorker() {
+        if (citySuggestionWorker != null && !citySuggestionWorker.isDone()) {
+            citySuggestionWorker.cancel(true);
+        }
+    }
+
+    /**
+     * Moves keyboard selection through the visible suggestions.
+     */
+    private void moveCitySuggestionSelection(int direction) {
+        if (citySuggestionModel.isEmpty()) {
+            scheduleCitySuggestions();
+            return;
+        }
+
+        if (!citySuggestionPopup.isVisible()) {
+            showCitySuggestions();
+            return;
+        }
+
+        int selectedIndex = citySuggestionList.getSelectedIndex();
+        int nextIndex = Math.max(0, Math.min(citySuggestionModel.getSize() - 1, selectedIndex + direction));
+        citySuggestionList.setSelectedIndex(nextIndex);
+        citySuggestionList.ensureIndexIsVisible(nextIndex);
+    }
+
+    /**
+     * Uses the selected Open-Meteo location directly for the weather lookup.
+     */
+    private void applyCitySuggestion(LocationResult location) {
+        if (location == null) {
+            return;
+        }
+
+        suppressSuggestionLookup = true;
+        cityField.setText(location.displayName());
+        suppressSuggestionLookup = false;
+        hideCitySuggestions();
+        loadWeather(location.displayName(), location, false);
+    }
+
+    /**
      * Loads the selected saved city into the dashboard.
      */
     private void loadSelectedSavedCity() {
@@ -412,7 +680,9 @@ public class DashboardPanel extends SkyBackgroundPanel {
             return;
         }
 
+        suppressSuggestionLookup = true;
         cityField.setText(savedCity.city());
+        suppressSuggestionLookup = false;
         loadWeather(savedCity.displayName(), savedCity.toLocationResult(), true);
     }
 
@@ -425,6 +695,8 @@ public class DashboardPanel extends SkyBackgroundPanel {
             return;
         }
 
+        cancelCitySuggestionWorker();
+        hideCitySuggestions();
         setLoading(true, "Po ngarkohet moti për " + city + "...");
         // Network calls run off the Swing event dispatch thread so the UI remains responsive.
         SwingWorker<WeatherData, Void> worker = new SwingWorker<>() {
