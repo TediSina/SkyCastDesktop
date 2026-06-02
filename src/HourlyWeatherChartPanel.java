@@ -70,7 +70,7 @@ public class HourlyWeatherChartPanel extends SurfacePanel {
             minTemp -= padding;
             maxTemp += padding;
 
-            drawLegend(g2, right, top, maxWind);
+            drawLegend(g2, left, right, top, maxWind);
             drawGrid(g2, chartLeft, chartRight, chartTop, chartBottom, minTemp, maxTemp);
             drawRainBars(g2, chartLeft, chartRight, chartBottom, maxRain);
             drawTemperatureLine(g2, chartLeft, chartRight, chartTop, chartBottom, minTemp, maxTemp);
@@ -89,16 +89,39 @@ public class HourlyWeatherChartPanel extends SurfacePanel {
         g2.drawString(subtitle, x, y + 25);
     }
 
-    private void drawLegend(Graphics2D g2, int right, int top, double maxWind) {
+    private void drawLegend(Graphics2D g2, int left, int right, int top, double maxWind) {
         g2.setFont(AppTheme.BODY);
+        FontMetrics metrics = g2.getFontMetrics();
+        String temperatureLabel = "Temp.";
+        String windLabel = "Erë max " + format(maxWind) + " km/h";
+        int markerGap = 8;
+        int itemGap = 20;
+        int legendWidth = 18 + markerGap + metrics.stringWidth(temperatureLabel)
+                + itemGap + 13 + markerGap + metrics.stringWidth(windLabel);
+        int x = Math.max(left, right - legendWidth);
+
+        if (legendWidth > right - left) {
+            drawTemperatureLegendItem(g2, left, top + 42, temperatureLabel);
+            drawWindLegendItem(g2, left, top + 60, windLabel);
+            return;
+        }
+
+        drawTemperatureLegendItem(g2, x, top + 4, temperatureLabel);
+        drawWindLegendItem(g2, x + 18 + markerGap + metrics.stringWidth(temperatureLabel) + itemGap, top + 2, windLabel);
+    }
+
+    private void drawTemperatureLegendItem(Graphics2D g2, int x, int y, String label) {
         g2.setColor(TEMP);
-        g2.fillRoundRect(right - 168, top + 4, 18, 5, 5, 5);
+        g2.fillRoundRect(x, y, 18, 5, 5, 5);
         g2.setColor(AppTheme.MUTED);
-        g2.drawString("Temp.", right - 143, top + 10);
+        g2.drawString(label, x + 26, y + 6);
+    }
+
+    private void drawWindLegendItem(Graphics2D g2, int x, int y, String label) {
         g2.setColor(RAIN);
-        g2.fillRoundRect(right - 82, top + 2, 13, 9, 5, 5);
+        g2.fillRoundRect(x, y, 13, 9, 5, 5);
         g2.setColor(AppTheme.MUTED);
-        g2.drawString("Max erë " + format(maxWind) + " km/h", right - 64, top + 10);
+        g2.drawString(label, x + 21, y + 8);
     }
 
     private void drawGrid(Graphics2D g2, int left, int right, int top, int bottom, double min, double max) {
